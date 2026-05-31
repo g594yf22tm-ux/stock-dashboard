@@ -14,9 +14,16 @@
     "screenshot": "node scripts/resize-screenshot.js && node scripts/ocr-screenshot.js",
     "tunnel": "node scripts/tunnel.js",
     "deploy": "node scripts/deploy-cloud.js",
-    "test": "node scripts/auto-fix.js"
+    "test": "node scripts/auto-fix.js",
+    "visual-check": "node scripts/visual-check.js"
   },
-  "keywords": ["A股", "股票", "仪表盘", "实时行情", "新浪财经"],
+  "keywords": [
+    "A股",
+    "股票",
+    "仪表盘",
+    "实时行情",
+    "新浪财经"
+  ],
   "author": "AI股票分析团队",
   "license": "MIT",
   "type": "commonjs",
@@ -26,6 +33,7 @@
     "iconv-lite": "^0.7.2",
     "localtunnel": "^2.0.2",
     "pinyin-pro": "^3.28.1",
+    "playwright": "^1.60.0",
     "sharp": "^0.34.5",
     "tesseract.js": "^7.0.0",
     "yahoo-finance2": "^2.14.0"
