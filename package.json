@@ -8,6 +8,7 @@
     "dashboard": "node dashboard/server.js",
     "dashboard:live": "node scripts/fetch-sina-data.js && node dashboard/server.js",
     "dashboard:fetch": "node scripts/fetch-sina-data.js",
+    "dashboard:fetch:yahoo": "node scripts/fetch-market-data.js",
     "dashboard:build": "node dashboard/server.js --build",
     "dashboard:dev": "node --watch dashboard/server.js",
     "screenshot": "node scripts/resize-screenshot.js && node scripts/ocr-screenshot.js",
