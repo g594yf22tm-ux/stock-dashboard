@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,45 +11,77 @@
       --up: #dc2626; --down: #16a34a; --accent: #d97706;
       --font: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
       --mono: 'JetBrains Mono', 'Consolas', monospace;
+      --hero-bg: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+      --hero-text: #fff; --hero-muted: #94a3b8;
+      --quote-bg: #fffbeb; --quote-text: #92400e;
+      --code-bg: #f1f5f9; --th-bg: #f1f5f9;
+      --tr-hover: #f8fafc; --shadow: none;
+      --toc-hover: #f1f5f9;
     }
+    [data-theme="dark"] {
+      --bg: #0c0c1d; --card: #161633; --border: #2a2a55;
+      --text: #e8eaed; --muted: #8890a8; --primary: #4f8cff;
+      --up: #ec4f5e; --down: #22c55e; --accent: #f59e0b;
+      --hero-bg: linear-gradient(135deg,#161633,#0c0c1d);
+      --hero-text: #e8eaed; --hero-muted: #8890a8;
+      --quote-bg: rgba(245,158,11,0.08); --quote-text: #f59e0b;
+      --code-bg: #1e1e42; --th-bg: #161633;
+      --tr-hover: rgba(255,255,255,0.03); --shadow: 0 2px 8px rgba(0,0,0,0.3);
+      --toc-hover: rgba(79,140,255,0.08);
+    }
+
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:var(--font); background:var(--bg); color:var(--text); line-height:1.85; }
 
-    .topbar {
-      background:#1e293b; color:#fff; padding:12px 24px;
-      display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:100;
+    /* Progress bar */
+    .progress-bar {
+      position:fixed; top:0; left:0; height:3px;
+      background:var(--primary); z-index:200; transition:width 0.1s;
     }
-    .topbar a { color:#94a3b8; text-decoration:none; font-size:0.85em; }
-    .topbar a:hover { color:#fff; }
-    .topbar .title { font-weight:700; font-size:1em; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .btn { padding:5px 12px; border-radius:6px; border:1px solid #475569; background:transparent; color:#cbd5e1; cursor:pointer; font-size:0.8em; text-decoration:none; transition:all 0.15s; }
-    .btn:hover { background:#334155; color:#fff; }
 
-    .container { max-width:860px; margin:0 auto; padding:28px 20px 60px; }
+    .topbar {
+      background:var(--card); border-bottom:1px solid var(--border);
+      color:var(--text); padding:10px 20px;
+      display:flex; align-items:center; gap:12px;
+      position:sticky; top:0; z-index:100; box-shadow:var(--shadow);
+    }
+    .topbar a { color:var(--muted); text-decoration:none; font-size:0.85em; }
+    .topbar a:hover { color:var(--primary); }
+    .topbar .title { font-weight:700; font-size:0.95em; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .topbar .nav-group { display:flex; gap:6px; }
+    .btn {
+      padding:5px 12px; border-radius:6px; border:1px solid var(--border);
+      background:var(--card); color:var(--text); cursor:pointer;
+      font-size:0.8em; text-decoration:none; transition:all 0.15s;
+    }
+    .btn:hover { background:var(--toc-hover); border-color:var(--primary); }
+    .btn:disabled { opacity:0.4; cursor:default; }
+    .btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+    .container { max-width:860px; margin:0 auto; padding:24px 20px 60px; }
 
     .report-hero {
-      background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
-      color:#fff; border-radius:16px; padding:36px; margin-bottom:28px;
+      background:var(--hero-bg); color:var(--hero-text);
+      border-radius:16px; padding:36px; margin-bottom:24px;
     }
     .report-hero .stock { font-size:1.8em; font-weight:700; }
-    .report-hero .meta { font-size:0.85em; color:#94a3b8; margin:6px 0 18px; }
+    .report-hero .meta { font-size:0.85em; color:var(--hero-muted); margin:6px 0 18px; }
     .hero-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; }
     .hero-m { background:rgba(255,255,255,0.07); border-radius:10px; padding:12px; }
-    .hero-m .l { font-size:0.72em; color:#94a3b8; }
+    .hero-m .l { font-size:0.72em; color:var(--hero-muted); }
     .hero-m .v { font-size:1.2em; font-weight:700; font-family:var(--mono); margin-top:2px; }
-    .hero-m .s { font-size:0.72em; margin-top:2px; }
 
     .toc {
       background:var(--card); border:1px solid var(--border);
-      border-radius:12px; padding:18px 22px; margin-bottom:24px;
+      border-radius:12px; padding:18px 22px; margin-bottom:24px; box-shadow:var(--shadow);
     }
-    .toc h3 { font-size:0.85em; color:var(--muted); margin-bottom:10px; }
-    .toc a { display:block; padding:3px 0; color:var(--primary); text-decoration:none; font-size:0.88em; }
-    .toc a:hover { text-decoration:underline; }
+    .toc h3 { font-size:0.85em; color:var(--muted); margin-bottom:10px; cursor:pointer; }
+    .toc a { display:block; padding:4px 8px; color:var(--primary); text-decoration:none; font-size:0.86em; border-radius:4px; }
+    .toc a:hover { background:var(--toc-hover); }
 
     .section {
       background:var(--card); border:1px solid var(--border);
-      border-radius:14px; padding:30px 32px; margin-bottom:18px;
+      border-radius:14px; padding:30px 32px; margin-bottom:18px; box-shadow:var(--shadow);
     }
     .section h2 { font-size:1.15em; margin-bottom:16px; padding-bottom:10px; border-bottom:2px solid var(--primary); display:flex; align-items:center; gap:8px; }
     .section h3 { font-size:1em; margin:22px 0 10px; color:var(--muted); }
@@ -58,40 +90,47 @@
     .section li { margin-bottom:4px; }
     .section blockquote {
       border-left:3px solid var(--accent); padding:10px 16px; margin:14px 0;
-      background:#fffbeb; border-radius:0 8px 8px 0; color:#92400e; font-size:0.95em;
+      background:var(--quote-bg); border-radius:0 8px 8px 0; color:var(--quote-text); font-size:0.95em;
     }
     .section hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
 
     .table-wrap { overflow-x:auto; margin:14px 0; }
     table { width:100%; border-collapse:collapse; font-size:0.88em; }
-    th { background:#f1f5f9; padding:9px 12px; text-align:left; font-weight:600; color:var(--muted); border-bottom:2px solid var(--border); font-size:0.8em; white-space:nowrap; }
+    th { background:var(--th-bg); padding:9px 12px; text-align:left; font-weight:600; color:var(--muted); border-bottom:2px solid var(--border); font-size:0.8em; white-space:nowrap; }
     td { padding:9px 12px; border-bottom:1px solid var(--border); }
-    tr:hover td { background:#f8fafc; }
+    tr:hover td { background:var(--tr-hover); }
     .up { color:var(--up); font-weight:600; }
     .down { color:var(--down); font-weight:600; }
 
     .badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.8em; font-weight:700; }
-    .badge.buy { background:#fef2f2; color:var(--up); }
-    .badge.hold { background:#fffbeb; color:var(--accent); }
-    .badge.watch { background:#eff6ff; color:var(--primary); }
-
-    .score-bar { display:flex; align-items:center; gap:10px; margin:5px 0; }
-    .score-bar .lb { width:70px; font-size:0.85em; color:var(--muted); }
-    .score-bar .tr { flex:1; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden; }
-    .score-bar .fl { height:100%; border-radius:4px; }
+    .badge.buy { background:rgba(236,79,94,0.12); color:var(--up); }
+    .badge.hold { background:rgba(245,158,11,0.12); color:var(--accent); }
+    .badge.watch { background:rgba(79,140,255,0.12); color:var(--primary); }
 
     .loading { text-align:center; padding:80px; color:var(--muted); }
-    .spinner { width:32px; height:32px; border:3px solid #e2e8f0; border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px; }
+    .spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px; }
     @keyframes spin { to{transform:rotate(360deg)} }
+
+    .back-top {
+      position:fixed; bottom:24px; right:24px; width:36px; height:36px;
+      border-radius:50%; background:var(--primary); color:#fff; border:0;
+      cursor:pointer; font-size:1.2em; opacity:0; transition:opacity 0.3s;
+      box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:50;
+    }
+    .back-top.show { opacity:1; }
 
     .footer { text-align:center; color:var(--muted); font-size:0.8em; padding:20px; border-top:1px solid var(--border); margin-top:16px; }
 
     @media (max-width:640px) {
       .report-hero { padding:20px; } .report-hero .stock { font-size:1.3em; }
       .section { padding:18px; } .container { padding:10px; }
+      .topbar { padding:8px 12px; gap:8px; }
+      .topbar .title { font-size:0.85em; }
+      .btn { padding:4px 8px; font-size:0.75em; }
     }
     @media print {
-      .topbar,.toc { display:none; } body { background:#fff; font-size:12px; }
+      .topbar,.toc,.progress-bar,.back-top { display:none; }
+      body { background:#fff; font-size:12px; }
       .container { max-width:100%; padding:0; }
       .section { break-inside:avoid; box-shadow:none; border:1px solid #ddd; }
     }
@@ -99,14 +138,24 @@
 </head>
 <body>
 
+<div class="progress-bar" id="progressBar"></div>
+
 <div class="topbar">
-  <a href="/">← 返回</a>
+  <a href="/">← 仪表盘</a>
+  <a href="/reports.html">📄 报告列表</a>
   <span class="title" id="reportTitle">分析报告</span>
-  <button class="btn" onclick="copyLink()">🔗 复制链接</button>
-  <button class="btn" onclick="window.print()">🖨️ 打印</button>
+  <div class="nav-group">
+    <button class="btn" id="prevBtn" onclick="navReport(-1)" disabled>◀ 上一篇</button>
+    <button class="btn" id="nextBtn" onclick="navReport(1)" disabled>下一篇 ▶</button>
+  </div>
+  <button class="btn" onclick="toggleTheme()" id="themeBtn">🌙 暗色</button>
+  <button class="btn" onclick="copyLink()">🔗</button>
+  <button class="btn" onclick="window.print()">🖨️</button>
 </div>
 
 <div class="container" id="content"><div class="loading"><div class="spinner"></div>加载中...</div></div>
+
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
 <div class="footer">AI 辅助生成 | 新浪财经实时行情 | 仅供参考，不构成投资建议</div>
 
@@ -114,28 +163,96 @@
 const p = new URLSearchParams(location.search);
 const file = p.get('file') || '';
 
-if (!file) document.getElementById('content').innerHTML = '<div class="loading">⚠️ 未指定报告<br><br><a href="/">← 返回仪表盘</a></div>';
-else load(file);
+// Theme
+const savedTheme = localStorage.getItem('report_theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+document.getElementById('themeBtn').textContent = savedTheme==='dark' ? '☀️ 亮色' : '🌙 暗色';
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('report_theme', next);
+  document.getElementById('themeBtn').textContent = next==='dark' ? '☀️ 亮色' : '🌙 暗色';
+}
+
+// Report list for navigation
+let reportList = [];
+let currentIdx = -1;
+
+async function loadReportList() {
+  try {
+    const r = await fetch('/api/reports');
+    const data = await r.json();
+    reportList = (data.reports || []).map(r => r.filename);
+    currentIdx = reportList.indexOf(file);
+    updateNavButtons();
+  } catch {}
+}
+
+function updateNavButtons() {
+  document.getElementById('prevBtn').disabled = currentIdx <= 0;
+  document.getElementById('nextBtn').disabled = currentIdx >= reportList.length - 1;
+}
+
+function navReport(dir) {
+  const newIdx = currentIdx + dir;
+  if (newIdx < 0 || newIdx >= reportList.length) return;
+  const newFile = reportList[newIdx];
+  window.location.href = '/report.html?file=' + encodeURIComponent(newFile);
+}
+
+if (!file) {
+  document.getElementById('content').innerHTML = '<div class="loading">⚠️ 未指定报告<br><br><a href="/">← 返回仪表盘</a></div>';
+} else {
+  load(file);
+  loadReportList();
+}
 
 function copyLink() {
-  const url = location.href;
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = document.querySelector('.topbar .btn');
-    const orig = btn.textContent;
-    btn.textContent = '✅ 已复制';
-    setTimeout(() => btn.textContent = orig, 1500);
+  navigator.clipboard.writeText(location.href).then(() => {
+    showToast('✅ 链接已复制');
   }).catch(() => alert('复制失败，请手动复制地址栏'));
 }
+
+function showToast(msg) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);padding:10px 20px;border-radius:20px;font-size:0.85em;z-index:400;transition:opacity 0.3s;opacity:0;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.opacity = '0', 1800);
+}
+
+// Progress bar
+window.addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('backTop').classList.toggle('show', window.scrollY > 400);
+});
 
 async function load(fn) {
   try {
     const r = await fetch('/reports/'+fn);
-    if (!r.ok) throw new Error('不存在');
+    if (!r.ok) throw new Error('报告不存在');
     const md = await r.text();
     document.getElementById('reportTitle').textContent = fn.replace(/\.md$/,'').replace(/_/g,' ');
     document.getElementById('content').innerHTML = renderMD(md);
+    // Scroll to hash if present
+    if (location.hash) {
+      setTimeout(() => {
+        const el = document.querySelector(location.hash);
+        if (el) el.scrollIntoView({behavior:'smooth'});
+      }, 100);
+    }
   } catch(e) {
-    document.getElementById('content').innerHTML = '<div class="loading">❌ 加载失败<br><small>'+e.message+'</small><br><br><a href="/">返回</a></div>';
+    document.getElementById('content').innerHTML = '<div class="loading">❌ 加载失败<br><small>'+e.message+'</small><br><br><a href="/">返回仪表盘</a></div>';
   }
 }
 
@@ -154,7 +271,6 @@ function renderMD(md) {
     if (tableBuf) { out += '<div class="table-wrap"><table>'+tableBuf+'</table></div>'; tableBuf = ''; }
     inTable = false;
   }
-
   function closeSection() {
     if (sectionOpen) { flushBuf(); flushTable(); out += '</div>'; sectionOpen = false; }
   }
@@ -163,25 +279,21 @@ function renderMD(md) {
     const raw = lines[i];
     const line = raw.trim();
 
-    // code fence
     if (raw.startsWith('```')) { inCode = !inCode; continue; }
     if (inCode) continue;
 
-    // empty line
     if (!line) {
       if (inTable) continue;
       flushBuf(); flushTable();
       continue;
     }
 
-    // horizontal rule — 不关闭 section，仅作视觉分割
     if (line === '---' || line === '***') { flushBuf(); flushTable(); out += '<hr>'; continue; }
 
     // h1 → hero
     if (line.startsWith('# ') && firstH1) {
       firstH1 = false;
       const title = line.slice(2);
-      // look ahead for date/analyst lines
       let meta1 = '', meta2 = '';
       let j = i + 1; while (j < lines.length && !lines[j].trim()) j++;
       if (j < lines.length && lines[j].includes('**日期**')) { meta1 = lines[j]; i = j; }
@@ -196,25 +308,22 @@ function renderMD(md) {
     if (line.startsWith('## ')) {
       closeSection();
       const title = line.slice(3);
-      const id = 's'+toc.length;
+      const id = 's' + toc.length;
       toc.push({ title, id });
       out += `<div class="section" id="${id}"><h2>${title}</h2>`;
       sectionOpen = true;
       continue;
     }
 
-    // h3 → sub-heading in section
     if (line.startsWith('### ')) {
       flushBuf(); flushTable();
       out += '<h3>'+line.slice(4)+'</h3>';
       continue;
     }
 
-    // table
     if (line.startsWith('|') && !line.startsWith('|--') && !line.startsWith('|:-')) {
       if (!inTable) { flushBuf(); inTable = true; }
       const cells = line.split('|').filter(c => c.trim());
-      // detect header (next line is separator)
       let isHeader = false;
       if (i + 1 < lines.length) {
         const next = lines[i+1].trim();
@@ -224,7 +333,7 @@ function renderMD(md) {
       tableBuf += '<tr>'+cells.map(c => {
         let v = c.trim();
         v = v.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-        const cls = /^\+|↑/.test(v) ? 'up' : /^\-|↓/.test(v) ? 'down' : '';
+        const cls = /^[＋+↑]|✅/.test(v) ? 'up' : /^[－\-↓]|❌|⚠️/.test(v) ? 'down' : '';
         return `<${tag} class="${cls}">${v}</${tag}>`;
       }).join('')+'</tr>';
       continue;
@@ -232,29 +341,24 @@ function renderMD(md) {
 
     if (inTable) { flushTable(); }
 
-    // blockquote
     if (line.startsWith('> ')) {
       flushBuf();
       out += '<blockquote>'+fmt(line.slice(2))+'</blockquote>';
       continue;
     }
 
-    // unordered list
     if (line.match(/^[\-\*]\s/)) {
       out += '<li>'+fmt(line.replace(/^[\-\*]\s/, ''))+'</li>';
       continue;
     }
 
-    // ordered list
     if (line.match(/^\d+\.\s/)) {
       out += '<li>'+fmt(line.replace(/^\d+\.\s/, ''))+'</li>';
       continue;
     }
 
-    // bold-only line
     if (/^\*\*.+\*\*$/.test(line)) { flushBuf(); out += '<p><b>'+fmt(line.replace(/\*\*/g,''))+'</b></p>'; continue; }
 
-    // normal text
     buf += (buf ? ' ' : '') + line;
   }
 
@@ -262,15 +366,13 @@ function renderMD(md) {
   flushTable();
   flushBuf();
 
-  // 生成 TOC
+  // TOC
   let tocHTML = '';
   if (toc.length > 1) {
-    tocHTML = '<div class="toc"><h3>📑 目录</h3>'+toc.map(t=>`<a href="#${t.id}">${t.title}</a>`).join('')+'</div>';
+    tocHTML = '<div class="toc"><h3 onclick="this.nextElementSibling.classList.toggle(\'collapsed\')">📑 目录 ('+toc.length+'章节)</h3><div>'+toc.map(t=>`<a href="#${t.id}">${t.title}</a>`).join('')+'</div></div>';
   }
 
-  // 把 TOC 插入 hero 之后
-  const full = heroHTML + '</div>' + tocHTML + out;
-  return full;
+  return heroHTML + '</div>' + tocHTML + out;
 }
 
 function fmt(t) {
@@ -278,7 +380,8 @@ function fmt(t) {
   return t
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
     .replace(/\*(.+?)\*/g, '<i>$1</i>')
-    .replace(/`([^`]+)`/g, '<code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>');
+    .replace(/`([^`]+)`/g, '<code style="background:var(--code-bg);padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
 }
 </script>
 </body>

@@ -386,7 +386,7 @@
 
   <!-- 关注列表 -->
   <div class="card">
-    <div class="card-title">👁️ 关注列表（<span id="watchCount">0</span>只）<span style="font-size:0.7em;color:var(--muted);font-weight:400;margin-left:6px">专家精选·点击表头排序</span></div>
+    <div class="card-title">👁️ 关注列表（<span id="watchCount">0</span>只）<span style="font-size:0.7em;color:var(--muted);font-weight:400;margin-left:6px">专家精选·点击表头排序</span><button class="btn" style="float:right;font-size:0.7em" onclick="exportCSV()" title="导出为CSV文件">📥 导出CSV</button></div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -876,11 +876,13 @@ async function showStockDetail(ticker) {
     ${stock.signal ? `
     <div class="detail-section">
       <div class="ds-title">🎯 当日技术信号</div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
         <span style="font-size:1.5em;font-weight:700;color:${stock.signal.color}">${stock.signal.signalText}</span>
         <span class="badge ${stock.signal.signal.toLowerCase()}" style="font-size:0.9em">${stock.signal.signal}</span>
         <span style="font-size:1.2em;font-weight:700;color:${stock.signal.color}">${stock.signal.score}分</span>
       </div>
+      <!-- 日内价格可视化 -->
+      <canvas id="dayChart" width="600" height="80" style="width:100%;max-width:600px;height:80px;margin:8px 0"></canvas>
       <div class="detail-grid">
         <div class="detail-metric"><div class="dm-label">相对昨收</div><div class="dm-value">${stock.signal.details.priceVsClose}</div></div>
         <div class="detail-metric"><div class="dm-label">日内振幅</div><div class="dm-value">${stock.signal.details.dayAmplitude}</div></div>
@@ -889,7 +891,55 @@ async function showStockDetail(ticker) {
         <div class="detail-metric"><div class="dm-label">量能</div><div class="dm-value">${stock.signal.details.volumeLevel}</div></div>
       </div>
       <div style="font-size:0.7em;color:var(--muted);margin-top:4px">${stock.signal.disclaimer}</div>
-    </div>` : ''}
+    </div>
+    <!-- 绘制日内K线图 -->
+    <script>
+    (function() {
+      const canvas = document.getElementById('dayChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const open = ${stock.open}, high = ${stock.high}, low = ${stock.low}, price = ${stock.price}, prevClose = ${stock.prevClose};
+      if (!open || !high || !low || !price) return;
+      const range = high - low || 1;
+      const pad = 40;
+      const chartW = W - pad*2;
+      const y = v => pad + (high - v) / range * (H - pad*2);
+      const up = price >= open;
+      const color = up ? '#ec4f5e' : '#22c55e';
+      // Background
+      ctx.fillStyle = 'rgba(0,0,0,0)'; ctx.fillRect(0,0,W,H);
+      // Prev close line
+      const pcY = y(prevClose);
+      if (pcY > pad && pcY < H-pad) {
+        ctx.setLineDash([4,4]); ctx.strokeStyle = '#8890a8'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(pad, pcY); ctx.lineTo(W-pad, pcY); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='#8890a8'; ctx.font='9px sans-serif';
+        ctx.fillText('昨收 '+prevClose.toFixed(2), W-pad-70, pcY-3);
+      }
+      // Range line
+      ctx.strokeStyle=color; ctx.lineWidth=1; ctx.globalAlpha=0.5;
+      ctx.beginPath(); ctx.moveTo(W/2, y(high)); ctx.lineTo(W/2, y(low)); ctx.stroke();
+      // High/Low ticks
+      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.globalAlpha=1;
+      ctx.beginPath(); ctx.moveTo(W/2-10, y(high)); ctx.lineTo(W/2+10, y(high)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W/2-10, y(low)); ctx.lineTo(W/2+10, y(low)); ctx.stroke();
+      // Open/Close bar
+      const barW = 16;
+      const oY = y(open), cY = y(price);
+      ctx.fillStyle = color;
+      ctx.fillRect(W/2-barW/2, Math.min(oY, cY), barW, Math.abs(cY-oY)||1);
+      // Price label
+      ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif';
+      ctx.fillText('¥'+price.toFixed(2), W/2+14, cY+4);
+      ctx.fillText('开 ¥'+open.toFixed(2), W/2-50, oY+4);
+      // High/Low labels
+      ctx.fillStyle=color; ctx.font='9px sans-serif';
+      ctx.fillText('高 '+high.toFixed(2), W/2+14, y(high)+4);
+      ctx.fillText('低 '+low.toFixed(2), W/2+14, y(low)+4);
+    })();
+    </script>` : ''}
 
     ${news?.articles?.length ? `
     <div class="detail-section">
@@ -986,6 +1036,38 @@ async function quickAnalyze(ticker) {
       refreshAll(); // 刷新报告列表
     }
   } catch(e) { showToast('❌ 分析失败'); }
+}
+
+// ── CSV 导出 ────────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows = document.querySelectorAll('#watchlistBody tr');
+  const data = [];
+  data.push(['代码','名称','最新价','涨跌','涨跌幅%','成交量','成交额(亿)','市盈率','目标价','专家评分','信号']);
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 8) return;
+    const ticker = cells[0]?.textContent?.trim() || '';
+    const name = cells[1]?.textContent?.trim() || '';
+    // Extract numbers from formatted text
+    const price = cells[2]?.textContent?.replace('¥','').trim() || '';
+    const change = cells[3]?.textContent?.replace(/[＋+]/,'').trim() || '';
+    const changePct = cells[4]?.textContent?.replace('%','').trim() || '';
+    const volume = cells[5]?.textContent?.trim() || '';
+    const amount = cells[6]?.textContent?.replace('亿','').trim() || '';
+    const pe = cells[7]?.textContent?.trim() || '';
+    const target = cells[8]?.textContent?.replace('¥','').trim() || '';
+    const stars = cells[9]?.textContent?.trim() || '';
+    const sig = cells[10]?.textContent?.trim() || '';
+    data.push([ticker,name,price,change,changePct,volume,amount,pe,target,stars,sig]);
+  });
+  const BOM = '﻿'; // Excel UTF-8 BOM
+  const csv = BOM + data.map(r => r.map(c => '"'+(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `A股关注列表_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📥 CSV已导出');
 }
 
 // ── 删除报告 ────────────────────────────────────────────────────────────
