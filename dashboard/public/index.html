@@ -892,54 +892,10 @@ async function showStockDetail(ticker) {
       </div>
       <div style="font-size:0.7em;color:var(--muted);margin-top:4px">${stock.signal.disclaimer}</div>
     </div>
-    <!-- 绘制日内K线图 -->
-    <script>
-    (function() {
-      const canvas = document.getElementById('dayChart');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const W = canvas.width, H = canvas.height;
-      const open = ${stock.open}, high = ${stock.high}, low = ${stock.low}, price = ${stock.price}, prevClose = ${stock.prevClose};
-      if (!open || !high || !low || !price) return;
-      const range = high - low || 1;
-      const pad = 40;
-      const chartW = W - pad*2;
-      const y = v => pad + (high - v) / range * (H - pad*2);
-      const up = price >= open;
-      const color = up ? '#ec4f5e' : '#22c55e';
-      // Background
-      ctx.fillStyle = 'rgba(0,0,0,0)'; ctx.fillRect(0,0,W,H);
-      // Prev close line
-      const pcY = y(prevClose);
-      if (pcY > pad && pcY < H-pad) {
-        ctx.setLineDash([4,4]); ctx.strokeStyle = '#8890a8'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(pad, pcY); ctx.lineTo(W-pad, pcY); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle='#8890a8'; ctx.font='9px sans-serif';
-        ctx.fillText('昨收 '+prevClose.toFixed(2), W-pad-70, pcY-3);
-      }
-      // Range line
-      ctx.strokeStyle=color; ctx.lineWidth=1; ctx.globalAlpha=0.5;
-      ctx.beginPath(); ctx.moveTo(W/2, y(high)); ctx.lineTo(W/2, y(low)); ctx.stroke();
-      // High/Low ticks
-      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.globalAlpha=1;
-      ctx.beginPath(); ctx.moveTo(W/2-10, y(high)); ctx.lineTo(W/2+10, y(high)); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W/2-10, y(low)); ctx.lineTo(W/2+10, y(low)); ctx.stroke();
-      // Open/Close bar
-      const barW = 16;
-      const oY = y(open), cY = y(price);
-      ctx.fillStyle = color;
-      ctx.fillRect(W/2-barW/2, Math.min(oY, cY), barW, Math.abs(cY-oY)||1);
-      // Price label
-      ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif';
-      ctx.fillText('¥'+price.toFixed(2), W/2+14, cY+4);
-      ctx.fillText('开 ¥'+open.toFixed(2), W/2-50, oY+4);
-      // High/Low labels
-      ctx.fillStyle=color; ctx.font='9px sans-serif';
-      ctx.fillText('高 '+high.toFixed(2), W/2+14, y(high)+4);
-      ctx.fillText('低 '+low.toFixed(2), W/2+14, y(low)+4);
-    })();
-    </script>` : ''}
+` : ''}
+    ${stock.open && stock.high && stock.low && stock.price ? `
+    <!-- Canvas由下面的drawDayChart绘制 -->
+    ` : ''}
 
     ${news?.articles?.length ? `
     <div class="detail-section">
@@ -965,6 +921,52 @@ async function showStockDetail(ticker) {
     <div style="text-align:right;margin-top:12px">
       <span style="font-size:0.75em;color:var(--muted)">数据来源: 新浪财经实时行情 · 仅供参考</span>
     </div>`;
+
+  // 绘制日内K线图（innerHTML后执行）
+  if (stock.open && stock.high && stock.low && stock.price) {
+    setTimeout(() => drawDayChart(stock), 50);
+  }
+}
+
+
+function drawDayChart(stock) {
+  const canvas = document.getElementById('dayChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const open = +stock.open, high = +stock.high, low = +stock.low;
+  const price = +stock.price, prevClose = +stock.prevClose;
+  if (!open || !high || !low || !price) return;
+  const range = high - low || 1;
+  const pad = 40;
+  const y = v => pad + (high - v) / range * (H - pad * 2);
+  const up = price >= open;
+  const color = up ? '#ec4f5e' : '#22c55e';
+  ctx.clearRect(0, 0, W, H);
+  const pcY = y(prevClose);
+  if (pcY > pad && pcY < H - pad) {
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = '#8890a8'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad, pcY); ctx.lineTo(W - pad, pcY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#8890a8'; ctx.font = '9px sans-serif';
+    ctx.fillText('昨收 ' + prevClose.toFixed(2), W - pad - 70, pcY - 3);
+  }
+  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
+  ctx.beginPath(); ctx.moveTo(W / 2, y(high)); ctx.lineTo(W / 2, y(low)); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(W / 2 - 10, y(high)); ctx.lineTo(W / 2 + 10, y(high)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W / 2 - 10, y(low)); ctx.lineTo(W / 2 + 10, y(low)); ctx.stroke();
+  const barW = 16;
+  const oY = y(open), cY = y(price);
+  ctx.fillStyle = color;
+  ctx.fillRect(W / 2 - barW / 2, Math.min(oY, cY), barW, Math.abs(cY - oY) || 1);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif';
+  ctx.fillText('¥' + price.toFixed(2), W / 2 + 14, cY + 4);
+  ctx.fillText('开 ¥' + open.toFixed(2), W / 2 - 50, oY + 4);
+  ctx.fillStyle = color; ctx.font = '9px sans-serif';
+  ctx.fillText('高 ' + high.toFixed(2), W / 2 + 14, y(high) + 4);
+  ctx.fillText('低 ' + low.toFixed(2), W / 2 + 14, y(low) + 4);
 }
 
 function closeDetail() {

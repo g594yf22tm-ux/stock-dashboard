@@ -218,14 +218,47 @@ async function main() {
 
   const ms = getMarketStatus();
 
+  // 从股票数据构建板块表现（按sector字段聚合）
+  const sectorMap = {};
+  for (const s of stockData) {
+    if (!s.sector || !s.changePercent) continue;
+    const name = s.sector.replace(/^[^一-龥]+/, ''); // 去掉emoji前缀
+    if (!sectorMap[name]) sectorMap[name] = { name, sum: 0, count: 0 };
+    sectorMap[name].sum += +s.changePercent;
+    sectorMap[name].count++;
+  }
+  const sectors = Object.values(sectorMap)
+    .map(s => ({ name: s.name, changePercent: +(s.sum / s.count).toFixed(2) }))
+    .sort((a, b) => b.changePercent - a.changePercent);
+
+  // 热门关注（成交量最大的前8只）
+  const trending = [...stockData]
+    .filter(s => s.volume > 0)
+    .sort((a, b) => b.volume - a.volume)
+    .slice(0, 8)
+    .map(s => ({
+      ticker: s.ticker, name: s.name,
+      price: s.price, changePercent: s.changePercent,
+      volume: s.volume
+    }));
+
+  // 涨跌统计
+  const advancers = stockData.filter(s => +s.changePercent > 0).length;
+  const decliners = stockData.filter(s => +s.changePercent < 0).length;
+
   // 写入市场数据
   const marketData = {
     timestamp: new Date().toISOString(),
-    source: '新浪财经 (GitHub Actions)',
+    source: '新浪财经',
     indices: indexData,
-    sectors: config.sectors || [],
+    sectors,
+    trending,
+    marketBreadth: {
+      advancers,
+      decliners,
+      unchanged: stockData.length - advancers - decliners,
+    },
     marketStatus: ms,
-    note: 'A股实时行情，交易日自动更新',
   };
   fs.writeFileSync(
     path.join(DATA_DIR, 'market.json'),
