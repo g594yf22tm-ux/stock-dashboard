@@ -1,30 +1,66 @@
-name: 更新行情数据
+name: A股行情自动更新
 
 on:
   schedule:
-    - cron: '*/5 1-7 * * 1-5'   # 北京时间 9:00-15:00 每5分钟
-    - cron: '*/30 * * * *'       # 其他时间每30分钟
-  workflow_dispatch:              # 手动触发
+    # 北京时间 9:00-15:00 交易时段每10分钟 (UTC+8 → UTC 1:00-7:00)
+    - cron: '*/10 1-7 * * 1-5'
+    # 北京时间 9:00前盘前数据 (UTC 1:00)
+    - cron: '45 0 * * 1-5'
+    # 其他时间每2小时
+    - cron: '0 */2 * * *'
+  workflow_dispatch:  # 手动触发
+
+# 权限设置（GitHub Pages 部署需要）
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
-  update:
+  update-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - run: npm install
+      - name: 安装依赖（仅 iconv-lite 用于 GBK 解码）
+        run: npm install --no-save iconv-lite
 
-      - name: 抓取市场数据
-        run: node scripts/fetch-market-data.js
+      - name: 🚀 抓取A股实时行情（新浪财经）
+        run: node scripts/fetch-sina-data.js
 
-      - name: 提交数据更新
+      - name: 📄 复制 standalone.html 到部署目录
         run: |
-          git config user.name "StockBot"
-          git config user.email "bot@stock.local"
+          mkdir -p _site
+          cp dashboard/public/standalone.html _site/index.html
+          cp -r dashboard/data _site/data 2>/dev/null || true
+          # 生成首页重定向
+          echo '<html><head><meta http-equiv="refresh" content="0;url=./index.html"></head><body>Redirecting...</body></html>' > _site/redirect.html
+
+      - name: 📊 提交数据更新
+        run: |
+          git config user.name "A股行情机器人"
+          git config user.email "stock-bot@github.com"
           git add dashboard/data/
-          git diff --staged --quiet || git commit -m "📊 行情数据更新 $(date +'%Y-%m-%d %H:%M')"
+          git diff --staged --quiet || git commit -m "📊 A股行情数据更新 $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')"
           git push
+
+      - name: 🔧 设置 GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: 📤 上传 Pages 文件
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: 🌐 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
