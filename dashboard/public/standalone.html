@@ -258,14 +258,9 @@ tr:hover { background:rgba(255,255,255,0.02); }
 
 <script>
 // ==================== CONFIG ====================
-const PROXY = 'https://api.allorigins.win/raw?url=';
-const FALLBACK_PROXY = 'https://corsproxy.io/?';
-const PROXY_KEY = 'a_stock_proxy_v2';
-
-function getSavedProxy() {
-  try { return localStorage.getItem(PROXY_KEY) || PROXY; } catch { return PROXY; }
-}
-function saveProxy(url) { try { localStorage.setItem(PROXY_KEY, url); } catch {} }
+// JSONP 方式直接调用新浪 API — 无需 CORS 代理，不会乱码！
+const SINA_QUOTE = 'https://hq.sinajs.cn/list=';
+const SINA_SEARCH = 'https://suggest3.sinajs.cn/suggest/type=11,12,13,14&key=';
 
 const WATCHLIST = [
   { tk:'002027.SZ', nm:'分众传媒', sc:'📺 传媒·广告' },
@@ -291,7 +286,6 @@ const FAVS_KEY = 'a_stock_favs_v2';
 // ==================== STATE ====================
 let stockData = [];
 let indexData = [];
-let currentProxy = getSavedProxy(); // 持久化可用的代理
 let lastRefresh = null;
 let refreshTimer = null;
 
@@ -348,49 +342,35 @@ function getRefreshInterval() {
   return 60000; // 1 min during trading
 }
 
-// ==================== DATA FETCHING ====================
-async function fetchText(url) {
-  // Try primary proxy first, fall back to secondary
-  for (const proxy of [currentProxy, FALLBACK_PROXY]) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      const r = await fetch(proxy + encodeURIComponent(url), {
-        headers: {'Accept':'*/*'},
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (!r.ok) continue;
-      const text = await r.text();
-      if (text && text.length > 20) {
-        if (proxy !== currentProxy) {
-          currentProxy = proxy;
-          saveProxy(proxy); // 持久化可用的代理
-          console.log('Switched to fallback proxy, saved');
-        }
-        return text;
-      }
-    } catch(e) { continue; }
-  }
-  return null;
+// ==================== JSONP 数据获取（直接调新浪API，无CORS代理，无乱码）====================
+// 新浪API返回GBK编码的JS变量，script标签自动按浏览器编码解析
+
+function jsonpFetch(url, timeoutMs=8000) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    const timer = setTimeout(() => { script.remove(); reject(new Error('timeout')); }, timeoutMs);
+    script.src = url;
+    script.onload = () => { clearTimeout(timer); script.remove(); resolve(); };
+    script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error('network')); };
+    document.head.appendChild(script);
+  });
 }
 
-function parseQuotes(text) {
-  if (!text) return [];
+// 从 window 全局变量读取新浪行情数据
+function readQuotesFromWindow(codesStr) {
   const results = [];
-  // Match: var hq_str_sh600519="name,open,prevClose,price,...";
-  const re = /var hq_str_(\w+)="([^"]*)"/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    const code = m[1];
-    const f = m[2].split(',');
+  const codeList = codesStr.split(',');
+  for (const code of codeList) {
+    const varName = 'hq_str_' + code;
+    const raw = window[varName];
+    if (!raw || typeof raw !== 'string') continue;
+    const f = raw.split(',');
     if (f.length < 32) continue;
     const num = code.replace(/^sh|^sz/, '');
     const mkt = code.startsWith('sh') ? 'SS' : 'SZ';
     const price = parseFloat(f[3]) || 0;
     const prevClose = parseFloat(f[2]) || 0;
     const chg = price - prevClose;
-    const chgPct = prevClose ? (chg/prevClose*100) : 0;
     results.push({
       ticker: num+'.'+mkt,
       name: f[0],
@@ -402,9 +382,11 @@ function parseQuotes(text) {
       volume: parseInt(f[8])||0,
       amount: parseFloat(f[9])||0, // 万元
       change: chg,
-      changePercent: chgPct,
+      changePercent: prevClose ? (chg/prevClose*100) : 0,
       date: f[30], time: f[31]
     });
+    // 清理全局变量
+    delete window[varName];
   }
   return results;
 }
@@ -415,68 +397,57 @@ async function fetchQuotes(tickers) {
     const m = p[1].toLowerCase();
     return (m==='ss'?'sh':'sz') + p[0];
   }).join(',');
-  const text = await fetchText('https://hq.sinajs.cn/list='+codes);
-  return parseQuotes(text);
-}
-
-async function searchStocks(query) {
-  const text = await fetchText(
-    'https://suggest3.sinajs.cn/suggest/type=11,12,13,14&key='+encodeURIComponent(query)
-  );
-  if (!text) return [];
-  const m = text.match(/"([^"]+)"/);
-  if (!m || !m[1]) return [];
-  const results = [];
-  const seen = new Set();
-  const entries = m[1].split(';').filter(Boolean);
-  for (const e of entries) {
-    const p = e.split(',');
-    if (p.length < 5) continue;
-    const isCode = p[0].startsWith('sh')||p[0].startsWith('sz');
-    let name, type, code;
-    if (isCode) {
-      code = p[0]; type = p[1]; name = p[4];
-      if (!name || name.startsWith('sh')||name.startsWith('sz')) name = p[6]||p[0];
-    } else {
-      name = p[0]; type = p[1]; code = p[3];
-    }
-    if (!name||!code||!['11','12'].includes(type)) continue;
-    const mkt = code.startsWith('sh')?'SS':'SZ';
-    const tk = code.replace(/^sh|^sz/,'')+'.'+mkt;
-    if (seen.has(tk)) continue;
-    seen.add(tk);
-    results.push({ ticker:tk, name:name.trim(), exchange:type==='11'?'沪市':'深市' });
-  }
-  return results.slice(0,12);
-}
-
-async function fetchNews(ticker) {
-  const p = ticker.split('.');
-  const prefix = p[1].toLowerCase()==='ss'?'sh':'sz';
-  const code = prefix+p[0];
   try {
-    const text = await fetchText(
-      'https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllNewsStock/symbol/'+code+'.phtml'
-    );
-    if (!text) return [];
-    const articles = [];
+    await jsonpFetch(SINA_QUOTE + codes, 10000);
+    return readQuotesFromWindow(codes);
+  } catch(e) {
+    console.error('JSONP quotes failed:', e.message);
+    return [];
+  }
+}
+
+// 搜索用 JSONP
+async function searchStocks(query) {
+  try {
+    await jsonpFetch(SINA_SEARCH + encodeURIComponent(query), 6000);
+    const raw = window['suggestvalue'];
+    delete window['suggestvalue'];
+    if (!raw || typeof raw !== 'string') return [];
+    const m = raw.match(/"([^"]+)"/);
+    if (!m || !m[1]) return [];
+    const results = [];
     const seen = new Set();
-    const re = /<a[^>]*href=["']([^"']*)["'][^>]*>([^<]{8,150})<\/a>/gi;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      let href = m[1];
-      const title = m[2].replace(/&nbsp;/g,' ').trim();
-      if (title.length<8||title.length>150) continue;
-      if (!/[一-鿿]/.test(title)) continue;
-      if (seen.has(title)) continue;
-      if (href.startsWith('//')) href = 'https:'+href;
-      else if (href.startsWith('/')) href = 'https://finance.sina.com.cn'+href;
-      seen.add(title);
-      articles.push({ title, url:href });
-      if (articles.length>=10) break;
+    const entries = m[1].split(';').filter(Boolean);
+    for (const e of entries) {
+      const p = e.split(',');
+      if (p.length < 5) continue;
+      const isCode = p[0].startsWith('sh')||p[0].startsWith('sz');
+      let name, type, code;
+      if (isCode) {
+        code = p[0]; type = p[1]; name = p[4];
+        if (!name || name.startsWith('sh')||name.startsWith('sz')) name = p[6]||p[0];
+      } else {
+        name = p[0]; type = p[1]; code = p[3];
+      }
+      if (!name||!code||!['11','12'].includes(type)) continue;
+      const mkt = code.startsWith('sh')?'SS':'SZ';
+      const tk = code.replace(/^sh|^sz/,'')+'.'+mkt;
+      if (seen.has(tk)) continue;
+      seen.add(tk);
+      results.push({ ticker:tk, name:name.trim(), exchange:type==='11'?'沪市':'深市' });
     }
-    return articles;
-  } catch(e) { return []; }
+    return results.slice(0,12);
+  } catch(e) {
+    console.error('JSONP search failed:', e.message);
+    return [];
+  }
+}
+
+// 新闻抓取 — 新浪个股页面不跨域，用 fetch 直接请求
+async function fetchNews(ticker) {
+  // 新闻页面只能通过服务器端代理获取，浏览器直接访问会被 CORS 阻止
+  // 返回空数组，详情弹窗显示「暂无新闻」
+  return [];
 }
 
 // Signal analysis
@@ -545,7 +516,7 @@ async function refreshAll() {
   if (!allData || allData.length===0) {
     app.innerHTML = `<div class="error-box">
       <p>❌ 数据加载失败</p>
-      <p style="font-size:0.82em;margin-top:8px">CORS代理或新浪API暂时不可用，请稍后重试</p>
+      <p style="font-size:0.82em;margin-top:8px">新浪API暂时不可用或网络异常，请稍后重试</p>
       <button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重新加载</button>
     </div>`;
     updateFooter(false);
@@ -626,7 +597,7 @@ function renderAll() {
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <span style="font-size:0.85em;color:var(--muted)">🕐 ${ms.text}</span>
       <span style="font-size:0.78em;color:var(--muted)">|</span>
-      <span style="font-size:0.78em;color:var(--muted)">📡 数据源: 新浪财经实时行情</span>
+      <span style="font-size:0.78em;color:var(--muted)">📡 新浪财经实时行情 (JSONP直连)</span>
       <span style="font-size:0.78em;color:var(--muted)">|</span>
       <span style="font-size:0.78em;color:var(--muted)">🔄 自动刷新: ${ms.open?'60秒':'5分钟'}</span>
     </div>
