@@ -1,0 +1,33 @@
+{
+  "name": "claude-code-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dashboard": "node scripts/init-dashboard-data.js && node dashboard/server.js",
+    "dashboard:update": "node scripts/fetch-market-data.js && node scripts/update-analysis.js && node dashboard/server.js",
+    "dashboard:fetch": "node scripts/fetch-market-data.js",
+    "dashboard:build": "node dashboard/server.js --build",
+    "screenshot": "node scripts/resize-screenshot.js && node scripts/ocr-screenshot.js",
+    "screenshot:compress": "node scripts/resize-screenshot.js",
+    "screenshot:ocr": "node scripts/ocr-screenshot.js",
+    "init": "node scripts/init-dashboard-data.js",
+    "tunnel": "node scripts/tunnel.js",
+    "share": "node dashboard/server.js & node scripts/tunnel.js",
+    "deploy": "node scripts/deploy-cloud.js",
+    "test": "echo \"所有系统就绪\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "iconv-lite": "^0.7.2",
+    "localtunnel": "^2.0.2",
+    "pinyin-pro": "^3.28.1",
+    "sharp": "^0.34.5",
+    "tesseract.js": "^7.0.0",
+    "yahoo-finance2": "^2.14.0"
+  }
+}

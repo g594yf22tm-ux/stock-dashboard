@@ -1,0 +1,56 @@
+{
+  "$schema": "Dashboard UI behavior and server configuration.",
+  "version": "1.0.0",
+
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "corsOrigin": "*"
+  },
+
+  "ui": {
+    "title": "股票分析仪表盘 — A股专用",
+    "refreshIntervalMs": 60000,
+    "theme": "dark",
+    "defaultView": "dashboard",
+
+    "panels": {
+      "header":        { "visible": true, "order": 1 },
+      "marketOverview": { "visible": true, "order": 2 },
+      "watchlist":      { "visible": true, "order": 3 },
+      "expertAnalysis": { "visible": true, "order": 4 },
+      "recentReports":  { "visible": true, "order": 5 },
+      "footer":         { "visible": true, "order": 6 }
+    },
+
+    "chartColors": {
+      "up":        "#22c55e",
+      "down":      "#ef4444",
+      "neutral":   "#6b7280",
+      "primary":   "#3b82f6",
+      "secondary": "#8b5cf6",
+      "accent":    "#f59e0b",
+      "background": "#0f172a",
+      "surface":    "#1e293b",
+      "border":     "#334155",
+      "text":       "#f8fafc",
+      "textMuted":  "#94a3b8"
+    }
+  },
+
+  "cache": {
+    "prices":       { "ttlSeconds": 60 },
+    "fundamentals": { "ttlSeconds": 86400 },
+    "insider":      { "ttlSeconds": 3600 },
+    "sectors":      { "ttlSeconds": 300 },
+    "indices":      { "ttlSeconds": 60 },
+    "analysis":     { "ttlSeconds": 3600 }
+  },
+
+  "fetchers": {
+    "concurrency": 5,
+    "timeoutMs": 15000,
+    "retries": 2,
+    "retryDelayMs": 1000
+  }
+}
