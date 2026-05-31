@@ -583,9 +583,9 @@ const staticOptions = {
   lastModified: true,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'public, max-age=60'); // HTML: 1 min
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     } else if (filePath.endsWith('.json')) {
-      res.setHeader('Cache-Control', 'public, max-age=120'); // JSON: 2 min
+      res.setHeader('Cache-Control', 'public, max-age=120');
     }
   }
 };

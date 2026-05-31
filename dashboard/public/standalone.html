@@ -221,7 +221,7 @@ tr:hover { background:rgba(255,255,255,0.02); }
 
 <!-- Header -->
 <div class="header">
-  <h1>📊 A股仪表盘</h1>
+  <h1>📊 A股仪表盘 <span style="font-size:0.5em;color:var(--muted);font-weight:400">v5.2</span></h1>
   <span class="status-dot" id="statusDot" title="交易状态"></span>
   <span class="market-badge" id="marketBadge">检测中...</span>
   <div class="search-wrap">
@@ -354,15 +354,15 @@ async function fetchQuotes(tickers) {
         return (data.stocks||[]).map(s => ({
           ticker: s.ticker,
           name: s.name,
-          open: s.open,
-          prevClose: s.price ? s.price - (s.change||0) : 0, // 反推昨收
-          price: s.price,
-          high: s.high,
-          low: s.low,
-          volume: s.volume,
-          amount: s.amount,
-          change: s.change,
-          changePercent: s.changePercent,
+          open: +s.open||0,
+          prevClose: (+s.price||0) - (+s.change||0),
+          price: +s.price||0,
+          high: +s.high||0,
+          low: +s.low||0,
+          volume: +s.volume||0,
+          amount: +s.amount||0,
+          change: +s.change||0,
+          changePercent: +s.changePercent||0,
           time: ''
         }));
       }
@@ -406,10 +406,15 @@ async function fetchNews(ticker) {
   return [];
 }
 
-// Signal analysis
+// Signal analysis (所有输入强制转数字，防止API字符串类型导致崩溃)
 function analyzeSignal(q) {
   if (!q||!q.price) return null;
-  const {price,prevClose,high,low,open,changePercent} = q;
+  const price = +q.price||0;
+  const prevClose = +q.prevClose||0;
+  const high = +q.high||0;
+  const low = +q.low||0;
+  const open = +q.open||0;
+  const changePercent = +q.changePercent||0;
   const dayRange = high-low;
   const pos = dayRange>0?(price-low)/dayRange:0.5;
   let score = 50;
@@ -487,24 +492,36 @@ async function refreshAll() {
           return {...cfg, quote: q||null};
         });
 
-        // 构建 stockData
+        // 构建 stockData（强制转数字，API可能返回字符串）
         stockData = WATCHLIST.map(cfg => {
           const s = (watchData.stocks||[]).find(d=>d.ticker===cfg.tk);
           const q = s ? {
-            ticker: s.ticker, name: s.name, price: s.price,
-            open: s.open, prevClose: s.price - (s.change||0),
-            high: s.high, low: s.low, volume: s.volume,
-            amount: s.amount, change: s.change,
-            changePercent: s.changePercent, time: ''
+            ticker: s.ticker, name: s.name,
+            price: +s.price||0,
+            open: +s.open||0,
+            prevClose: (+s.price||0) - (+s.change||0),
+            high: +s.high||0,
+            low: +s.low||0,
+            volume: +s.volume||0,
+            amount: +s.amount||0,
+            change: +s.change||0,
+            changePercent: +s.changePercent||0,
+            time: ''
           } : null;
           return {...cfg, quote:q, signal:q?analyzeSignal(q):null};
         });
 
-        renderAll();
-        updateFooter(true);
-        lastRefresh = Date.now();
-        scheduleNextRefresh();
-        return;
+        try {
+          renderAll();
+          updateFooter(true);
+          lastRefresh = Date.now();
+          scheduleNextRefresh();
+          return;
+        } catch(e) {
+          console.error('Render error:', e.message, e.stack);
+          app.innerHTML = '<div class="error-box"><p>❌ 渲染错误</p><p style="font-size:0.82em">'+e.message+'</p><button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重试</button></div>';
+          return;
+        }
       }
     } catch(e) { console.error('API error:', e.message); }
   } else {
