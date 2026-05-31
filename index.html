@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>📊 A股仪表盘 — 24/7 实时行情</title>
+<style>
+:root {
+  --bg: #0c0c1d; --surface: #161633; --surface2: #1e1e42; --border: #2a2a55;
+  --text: #e8eaed; --muted: #8890a8; --up: #ec4f5e; --down: #22c55e;
+  --primary: #4f8cff; --accent: #f59e0b; --info: #06b6d4;
+  --up-bg: rgba(236,79,94,0.10); --down-bg: rgba(34,197,94,0.10);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg); color: var(--text); min-height: 100vh;
+}
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #161633, #0c0c1d);
+  border-bottom: 1px solid var(--border); padding: 10px 20px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top:0; z-index:100; flex-wrap: wrap;
+}
+.header h1 { font-size: 1.1em; white-space: nowrap; }
+.header .status-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--down);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.header .status-dot.closed { background: var(--muted); animation: none; }
+.header .market-badge {
+  font-size: 0.72em; padding: 3px 10px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+}
+
+/* Search */
+.search-wrap { flex:1; max-width:420px; position:relative; min-width:180px; }
+.search-wrap input {
+  width:100%; padding:8px 14px; border-radius:20px;
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--text); font-size:0.9em; outline:0;
+}
+.search-wrap input:focus { border-color:var(--primary); }
+.search-results {
+  position:absolute; top:105%; left:0; right:0; background:var(--surface);
+  border:1px solid var(--border); border-radius:10px; max-height:320px;
+  overflow-y:auto; display:none; z-index:200;
+  box-shadow:0 10px 30px rgba(0,0,0,0.5);
+}
+.search-results .sr-item {
+  padding:10px 14px; cursor:pointer; border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.search-results .sr-item:hover { background:var(--surface2); }
+.search-results .sr-item .sr-name { font-weight:600; }
+.search-results .sr-item .sr-code { font-size:0.78em; color:var(--muted); }
+.search-results .sr-item .sr-exch { font-size:0.7em; color:var(--info); }
+
+/* Buttons */
+.btn {
+  padding:6px 14px; border-radius:8px; border:1px solid var(--border);
+  background:var(--surface); color:var(--text); cursor:pointer;
+  font-size:0.82em; transition: all 0.15s;
+}
+.btn:hover { background:var(--surface2); border-color:var(--primary); }
+.btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.btn-primary:hover { filter:brightness(1.15); }
+.btn-sm { padding:3px 10px; font-size:0.75em; }
+
+/* Container */
+.container { max-width:1200px; margin:0 auto; padding:14px 16px; }
+
+/* Card */
+.card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:16px; margin-bottom:14px;
+}
+.card-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px; flex-wrap:wrap; gap:8px;
+}
+.card-header h3 { font-size:0.9em; color:var(--muted); }
+
+/* Index cards */
+.idx-grid { display:flex; gap:12px; flex-wrap:wrap; }
+.idx-card {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:12px; padding:14px 16px; flex:1; min-width:150px;
+}
+.idx-card .idx-name { font-size:0.78em; color:var(--muted); margin-bottom:6px; }
+.idx-card .idx-price { font-size:1.3em; font-weight:700; }
+.idx-card .idx-chg { font-size:0.9em; margin-top:4px; }
+
+/* Table */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.85em; }
+th {
+  background:var(--surface); padding:9px 10px; text-align:left;
+  color:var(--muted); border-bottom:2px solid var(--border);
+  font-size:0.78em; white-space:nowrap; cursor:pointer; user-select:none;
+}
+th:hover { color:var(--text); }
+td { padding:9px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+tr:hover { background:rgba(255,255,255,0.02); }
+.up { color:var(--up); } .down { color:var(--down); }
+
+/* Signal badge */
+.signal-badge {
+  display:inline-block; padding:2px 8px; border-radius:8px;
+  font-size:0.75em; font-weight:600;
+}
+.signal-bull { background:var(--up-bg); color:var(--up); }
+.signal-bear { background:var(--down-bg); color:var(--down); }
+.signal-neut { background:rgba(245,158,11,0.12); color:var(--accent); }
+
+/* Sector tag */
+.sector-tag {
+  font-size:0.72em; padding:2px 6px; border-radius:4px;
+  background:var(--surface2); border:1px solid var(--border);
+}
+
+/* Favorites */
+.fav-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.fav-chip {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:5px 10px; border-radius:14px; font-size:0.82em;
+  background:var(--surface2); border:1px solid var(--border); cursor:pointer;
+}
+.fav-chip:hover { border-color:var(--primary); }
+.fav-chip .remove { font-size:0.85em; opacity:0.5; }
+.fav-chip .remove:hover { opacity:1; color:var(--up); }
+
+/* Modal */
+.modal-overlay {
+  display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.7); z-index:300; align-items:center; justify-content:center;
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:24px; max-width:640px; width:95%;
+  max-height:85vh; overflow-y:auto; position:relative;
+}
+.modal-close {
+  position:absolute; top:12px; right:16px;
+  background:0; border:0; color:var(--muted); font-size:1.4em; cursor:pointer;
+}
+.modal-close:hover { color:var(--text); }
+.modal h2 { margin-bottom:16px; font-size:1.15em; }
+.modal .info-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;
+}
+.modal .info-item {
+  background:var(--surface2); border-radius:8px; padding:10px 12px;
+}
+.modal .info-item .label { font-size:0.72em; color:var(--muted); }
+.modal .info-item .value { font-size:1em; font-weight:600; margin-top:3px; }
+.modal .news-item {
+  padding:8px 0; border-bottom:1px solid var(--border);
+}
+.modal .news-item a {
+  color:var(--text); text-decoration:none; font-size:0.85em;
+}
+.modal .news-item a:hover { color:var(--primary); }
+.modal .news-item .news-src { font-size:0.7em; color:var(--muted); }
+
+/* Sparkline */
+.sparkline { display:inline-flex; align-items:flex-end; gap:1.5px; height:24px; }
+.sparkline span { width:3px; border-radius:2px; min-height:2px; }
+
+/* Loading & Error */
+.loading { text-align:center; padding:40px; color:var(--muted); }
+.loading .spinner {
+  display:inline-block; width:32px; height:32px; border:3px solid var(--border);
+  border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.error-box {
+  text-align:center; padding:30px; color:var(--up);
+  background:var(--up-bg); border:1px solid var(--up); border-radius:12px;
+}
+.empty { text-align:center; padding:20px; color:var(--muted); font-size:0.85em; }
+
+/* Footer */
+.footer {
+  text-align:center; padding:16px; color:var(--muted); font-size:0.72em;
+  border-top:1px solid var(--border); margin-top:10px;
+}
+.footer a { color:var(--primary); text-decoration:none; }
+
+/* Toast */
+.toast {
+  position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
+  background:var(--surface2); border:1px solid var(--border);
+  padding:10px 20px; border-radius:20px; font-size:0.85em;
+  z-index:400; opacity:0; transition:opacity 0.3s;
+}
+.toast.show { opacity:1; }
+
+/* Responsive */
+@media (max-width:768px) {
+  .header { padding:8px 12px; gap:8px; }
+  .header h1 { font-size:0.95em; }
+  .search-wrap { max-width:100%; }
+  .idx-card { min-width:100px; padding:10px 12px; }
+  .idx-card .idx-price { font-size:1.1em; }
+  table { font-size:0.78em; }
+  th, td { padding:6px 7px; }
+  .modal .info-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>📊 A股仪表盘 <span style="font-size:0.5em;color:var(--muted);font-weight:400">v5.2</span></h1>
+  <span class="status-dot" id="statusDot" title="交易状态"></span>
+  <span class="market-badge" id="marketBadge">检测中...</span>
+  <div class="search-wrap">
+    <input id="searchInput" placeholder="🔍 搜代码/名称/拼音，如 600519、茅台、GZMT..."
+           oninput="handleSearch()" onkeydown="handleSearchKey(event)"
+           autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+  </div>
+  <button class="btn btn-primary" onclick="refreshAll()" id="refreshBtn">🔄 刷新</button>
+</div>
+
+<!-- Main Content -->
+<div class="container" id="app">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p style="margin-top:12px;">⏳ 正在获取实时行情...</p>
+    <p style="font-size:0.78em;color:var(--muted)">新浪财经 · 全A股覆盖</p>
+  </div>
+</div>
+
+<!-- Stock Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Footer -->
+<div class="footer">
+  <span id="footerInfo">最后刷新: --</span> ·
+  数据来源: <a href="https://finance.sina.com.cn" target="_blank">新浪财经</a> ·
+  7×24h 在线 · 仅供参考
+</div>
+
+<script>
+// ==================== CONFIG ====================
+const WATCHLIST = [
+  { tk:'002027.SZ', nm:'分众传媒', sc:'📺 传媒·广告' },
+  { tk:'300015.SZ', nm:'爱尔眼科', sc:'🏥 医药·眼科' },
+  { tk:'600031.SS', nm:'三一重工', sc:'🔧 机械·周期' },
+  { tk:'600585.SS', nm:'海螺水泥', sc:'🏗️ 建材·水泥' },
+  { tk:'600030.SS', nm:'中信证券', sc:'📊 券商·弹性' },
+  { tk:'600887.SS', nm:'伊利股份', sc:'🥛 消费·乳业' },
+  { tk:'600900.SS', nm:'长江电力', sc:'⚡ 电力·高股息' },
+  { tk:'601899.SS', nm:'紫金矿业', sc:'🪙 有色·通胀对冲' },
+  { tk:'600036.SS', nm:'招商银行', sc:'🏦 银行·龙头' },
+  { tk:'600438.SS', nm:'通威股份', sc:'☀️ 新能源·硅料' }
+];
+
+const INDICES = [
+  { tk:'000001.SS', nm:'上证指数' },
+  { tk:'399001.SZ', nm:'深证成指' },
+  { tk:'399006.SZ', nm:'创业板指' }
+];
+
+const FAVS_KEY = 'a_stock_favs_v2';
+
+// ==================== STATE ====================
+let stockData = [];
+let indexData = [];
+let lastRefresh = null;
+let refreshTimer = null;
+
+// ==================== UTILS ====================
+function getFavs() { try{return JSON.parse(localStorage.getItem(FAVS_KEY))||[]}catch{return[]} }
+function saveFavs(arr) { localStorage.setItem(FAVS_KEY, JSON.stringify(arr)); }
+
+function fmtNum(n, d) {
+  if (n == null || isNaN(n)) return '--';
+  return Number(n).toFixed(d||2);
+}
+
+function fmtVol(v) {
+  // Sina fields[8] = 成交量(手), A股以万手为单位显示
+  if (!v || v<=0) return '--';
+  if (v>=1e8) return (v/1e8).toFixed(2)+'亿手';
+  if (v>=1e4) return (v/1e4).toFixed(0)+'万手';
+  return (v||0).toFixed(0)+'手';
+}
+
+function fmtAmt(a) {
+  // Sina fields[9] = 成交额(万元), 除以10000 = 亿元
+  if (!a || a<=0) return '--';
+  return (a/10000).toFixed(2)+'亿';
+}
+
+function fmtTime(ts) {
+  if (!ts) return '--';
+  const d = new Date(ts);
+  return d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// Market status (Beijing time)
+function getMarketStatus() {
+  const now = new Date();
+  const bj = new Date(now.getTime() + 8*3600*1000);
+  const h = bj.getUTCHours(), m = bj.getUTCMinutes(), day = bj.getUTCDay();
+  const t = h*60 + m;
+
+  if (day===0||day===6) return {open:false, text:'周末休市', cls:'closed'};
+
+  if (t<9*60+15) return {open:false, text:'盘前', cls:'closed'};
+  if (t<9*60+25) return {open:true, text:'集合竞价', cls:''};
+  if (t<11*60+30) return {open:true, text:'上午盘', cls:''};
+  if (t<13*60) return {open:false, text:'午间休市', cls:'closed'};
+  if (t<15*60) return {open:true, text:'下午盘', cls:''};
+  if (t<15*60+30) return {open:false, text:'收盘撮合', cls:'closed'};
+  return {open:false, text:'已收盘', cls:'closed'};
+}
+
+function getRefreshInterval() {
+  const ms = getMarketStatus();
+  if (!ms.open) return 300000; // 5 min off-hours
+  return 60000; // 1 min during trading
+}
+
+// ==================== 数据获取 ====================
+// 三层数据源: ① Express API (本地) ② jsDelivr CDN (远程, GitHub Actions推送) ③ 离线缓存
+
+const isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const CDN_BASE = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
+
+// CDN 数据获取（jsDelivr 全球CDN，中国可访问，GitHub Actions每10分钟更新）
+async function fetchCDN(file) {
+  try {
+    const r = await fetch(CDN_BASE + '/' + file, { cache: 'no-cache' });
+    if (r.ok) return await r.json();
+  } catch(e) { console.error('CDN fetch failed:', e.message); }
+  return null;
+}
+
+async function fetchQuotes(tickers) {
+  // ① 本地: Express API (实时数据)
+  if (isLocal && location.port==='3000') {
+    try {
+      const r = await fetch('/api/watchlist/live');
+      if (r.ok) {
+        const data = await r.json();
+        return (data.stocks||[]).map(s => ({
+          ticker: s.ticker, name: s.name, open: +s.open||0,
+          prevClose: (+s.price||0) - (+s.change||0), price: +s.price||0,
+          high: +s.high||0, low: +s.low||0, volume: +s.volume||0,
+          amount: +s.amount||0, change: +s.change||0,
+          changePercent: +s.changePercent||0, time: ''
+        }));
+      }
+    } catch(e) { console.error('Local API failed:', e.message); }
+  }
+
+  // ② 远程: jsDelivr CDN (GitHub Actions定时推送的数据)
+  const cdn = await fetchCDN('watchlist.json');
+  if (cdn && cdn.stocks) {
+    return cdn.stocks.map(s => ({
+      ticker: s.ticker, name: s.name, open: +s.open||0,
+      prevClose: (+s.price||0) - (+s.change||0), price: +s.price||0,
+      high: +s.high||0, low: +s.low||0, volume: +s.volume||0,
+      amount: +s.amount||0, change: +s.change||0,
+      changePercent: +s.changePercent||0, time: s.time||''
+    }));
+  }
+
+  return [];
+}
+
+async function searchStocks(query) {
+  if (isLocal && location.port==='3000') {
+    try {
+      const r = await fetch('/api/search?q='+encodeURIComponent(query));
+      if (r.ok) {
+        const data = await r.json();
+        return (data.results||[]).map(r => ({
+          ticker: r.ticker, name: r.name,
+          exchange: r.exchange||(r.ticker.endsWith('.SS')?'沪市':'深市')
+        }));
+      }
+    } catch(e) {}
+  }
+  return []; // CDN模式不支持实时搜索
+}
+
+async function fetchNews(ticker) {
+  if (isLocal && location.port==='3000') {
+    try {
+      const r = await fetch('/api/stock/'+encodeURIComponent(ticker)+'/news');
+      if (r.ok) {
+        const data = await r.json();
+        return (data.articles||[]).map(a => ({title:a.title, url:a.url}));
+      }
+    } catch(e) {}
+  }
+  return [];
+}
+
+// Signal analysis (所有输入强制转数字，防止API字符串类型导致崩溃)
+function analyzeSignal(q) {
+  if (!q||!q.price) return null;
+  const price = +q.price||0;
+  const prevClose = +q.prevClose||0;
+  const high = +q.high||0;
+  const low = +q.low||0;
+  const open = +q.open||0;
+  const changePercent = +q.changePercent||0;
+  const dayRange = high-low;
+  const pos = dayRange>0?(price-low)/dayRange:0.5;
+  let score = 50;
+  if (changePercent>=3) score+=15;
+  else if (changePercent>=1) score+=8;
+  else if (changePercent<=-3) score-=15;
+  else if (changePercent<=-1) score-=8;
+  if (pos>0.7&&changePercent>0) score+=10;
+  else if (pos<0.3&&changePercent<0) score-=10;
+  if (price>open&&changePercent>0) score+=5;
+  else if (price<open&&changePercent<0) score-=5;
+
+  let signal, text, cls;
+  if (score>=70) {signal='STRONG';text='强势看多';cls='signal-bull';}
+  else if (score>=60) {signal='BUY';text='偏多';cls='signal-bull';}
+  else if (score>=45) {signal='HOLD';text='震荡观望';cls='signal-neut';}
+  else if (score>=35) {signal='WATCH';text='偏弱关注';cls='signal-bear';}
+  else {signal='WEAK';text='弱势回避';cls='signal-bear';}
+
+  return {
+    score:Math.min(100,Math.max(0,score)),
+    signal, text, cls,
+    details: {
+      vsClose: `${changePercent>=0?'+':''}${changePercent.toFixed(2)}%`,
+      amplitude: prevClose>0?((dayRange/prevClose)*100).toFixed(2)+'%':'--',
+      pos: `${(pos*100).toFixed(0)}%`,
+      direction: price>open?'低开高走↑':price<open?'高开低走↓':'平开',
+      volume: q.volume>1e7?'放量':q.volume>5e6?'正常':'缩量'
+    }
+  };
+}
+
+// Sparkline — deterministic visual based on change percent
+function renderSparkline(changePercent) {
+  const bars = 8;
+  const up = (changePercent||0) >= 0;
+  const intensity = Math.min(Math.abs(changePercent||0) / 10, 1); // 0-1 scale
+  const color = up ? 'var(--up)' : 'var(--down)';
+  // Use a simple hash of changePercent for deterministic pseudo-data
+  const seed = Math.abs(Math.round((changePercent||0)*100));
+  const heights = [];
+  for (let i=0;i<bars;i++) {
+    // Deterministic pseudo-random based on seed and position
+    const h = 0.3 + 0.4*intensity + 0.3*((seed*(i+1)*7)%100)/100;
+    heights.push(Math.min(1, h));
+  }
+  return '<div class="sparkline">'+heights.map(h =>
+    `<span style="height:${Math.round(h*24)}px;background:${color}"></span>`
+  ).join('')+'</div>';
+}
+
+// ==================== RENDER ====================
+async function refreshAll() {
+  const app = document.getElementById('app');
+  app.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:12px">⏳ 获取实时行情...</p></div>';
+
+  const isLocal = location.port==='3000' && (location.hostname==='localhost'||location.hostname==='127.0.0.1');
+
+  if (isLocal) {
+    // 同源：直接调用 Express API
+    try {
+      const [marketResp, watchResp] = await Promise.all([
+        fetch('/api/market'),
+        fetch('/api/watchlist/live')
+      ]);
+
+      if (marketResp.ok && watchResp.ok) {
+        const marketData = await marketResp.json();
+        const watchData = await watchResp.json();
+
+        // 构建 indexData
+        const idxMap = marketData.indices || {};
+        indexData = INDICES.map(cfg => {
+          const q = idxMap[cfg.tk];
+          return {...cfg, quote: q||null};
+        });
+
+        // 构建 stockData（强制转数字，API可能返回字符串）
+        stockData = WATCHLIST.map(cfg => {
+          const s = (watchData.stocks||[]).find(d=>d.ticker===cfg.tk);
+          const q = s ? {
+            ticker: s.ticker, name: s.name,
+            price: +s.price||0,
+            open: +s.open||0,
+            prevClose: (+s.price||0) - (+s.change||0),
+            high: +s.high||0,
+            low: +s.low||0,
+            volume: +s.volume||0,
+            amount: +s.amount||0,
+            change: +s.change||0,
+            changePercent: +s.changePercent||0,
+            time: ''
+          } : null;
+          return {...cfg, quote:q, signal:q?analyzeSignal(q):null};
+        });
+
+        try {
+          renderAll();
+          updateFooter(true);
+          lastRefresh = Date.now();
+          scheduleNextRefresh();
+          return;
+        } catch(e) {
+          console.error('Render error:', e.message, e.stack);
+          app.innerHTML = '<div class="error-box"><p>❌ 渲染错误</p><p style="font-size:0.82em">'+e.message+'</p><button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重试</button></div>';
+          return;
+        }
+      }
+    } catch(e) { console.error('API error:', e.message); }
+  } else {
+    // 远程：使用 jsDelivr CDN 数据 (GitHub Actions 每10分钟推送)
+    try {
+      const [marketCDN, watchCDN] = await Promise.all([
+        fetchCDN('market.json'),
+        fetchCDN('watchlist.json')
+      ]);
+
+      if (marketCDN && watchCDN) {
+        // 构建 indexData
+        const idxMap = marketCDN.indices || {};
+        indexData = INDICES.map(cfg => {
+          const q = idxMap[cfg.tk];
+          return {...cfg, quote: q ? {price: q.price, change: q.change, changePercent: q.changePercent} : null};
+        });
+
+        // 构建 stockData
+        stockData = WATCHLIST.map(cfg => {
+          const s = (watchCDN.stocks||[]).find(d=>d.ticker===cfg.tk);
+          const q = s ? {
+            ticker: s.ticker, name: s.name,
+            price: +s.price||0, open: +s.open||0,
+            prevClose: (+s.price||0) - (+s.change||0),
+            high: +s.high||0, low: +s.low||0,
+            volume: +s.volume||0, amount: +s.amount||0,
+            change: +s.change||0, changePercent: +s.changePercent||0,
+            time: s.time||''
+          } : null;
+          return {...cfg, quote:q, signal:q?analyzeSignal(q):null};
+        });
+
+        try {
+          renderAll();
+          updateFooter(true, marketCDN.timestamp);
+          lastRefresh = Date.now();
+          scheduleNextRefresh();
+          return;
+        } catch(e) {
+          console.error('Render error:', e.message);
+          app.innerHTML = '<div class="error-box"><p>❌ 渲染错误</p><p>'+e.message+'</p><button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重试</button></div>';
+          return;
+        }
+      }
+    } catch(e) { console.error('CDN error:', e.message); }
+  }
+
+  // 全部失败
+  app.innerHTML = `<div class="error-box">
+    <p>❌ 数据加载失败</p>
+    <p style="font-size:0.82em;margin-top:8px">${isLocal ? '请确保Express服务器正在运行' : 'CDN数据暂不可用，请稍后刷新'}</p>
+    <p style="font-size:0.75em;margin-top:4px;color:var(--muted)">💡 数据由 GitHub Actions 每10分钟自动更新</p>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重新加载</button>
+  </div>`;
+  updateFooter(false);
+}
+
+function renderAll() {
+  const favs = getFavs();
+  const ms = getMarketStatus();
+
+  // Index cards
+  const idxHTML = indexData.map(i => {
+    const q = i.quote;
+    if (!q) return '';
+    const chg = q.change||0;
+    const pct = q.changePercent||0;
+    return `<div class="idx-card">
+      <div class="idx-name">${i.nm}</div>
+      <div class="idx-price">${fmtNum(q.price)}</div>
+      <div class="idx-chg ${chg>=0?'up':'down'}">
+        ${chg>=0?'+':''}${fmtNum(chg)} (${chg>=0?'+':''}${fmtNum(pct)}%)
+      </div>
+    </div>`;
+  }).join('');
+
+  // Stock table
+  const rows = stockData.map((s,i) => {
+    const q = s.quote;
+    const sig = s.signal;
+    const chg = q?.change||0;
+    const pct = q?.changePercent||0;
+    const isFav = favs.find(f=>f.ticker===s.tk);
+    const spark = renderSparkline(pct);
+    return `<tr>
+      <td><b>${s.tk}</b></td>
+      <td>${s.nm} <span class="sector-tag">${s.sc||''}</span></td>
+      <td>${q?q.price.toFixed(2):'--'}</td>
+      <td class="${chg>=0?'up':'down'}">${chg>=0?'+':''}${fmtNum(chg)}</td>
+      <td class="${chg>=0?'up':'down'}">${chg>=0?'+':''}${fmtNum(pct)}%</td>
+      <td>${q?fmtVol(q.volume):'--'}</td>
+      <td>${q?fmtAmt(q.amount):'--'}</td>
+      <td>${spark}</td>
+      <td>${sig?`<span class="signal-badge ${sig.cls}">${sig.text} ${sig.score}</span>`:'<span class="signal-badge signal-neut">--</span>'}</td>
+      <td>
+        <button class="btn btn-sm" onclick="showDetail('${s.tk}','${s.nm.replace(/'/g,"\\'")}')" title="查看详情">📋</button>
+        <button class="btn btn-sm" style="margin-left:2px" onclick="toggleFav('${s.tk}','${s.nm.replace(/'/g,"\\'")}')">${isFav?'⭐':'☆'}</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Favorites section
+  const favHTML = favs.length ? favs.map(f =>
+    `<span class="fav-chip" onclick="showDetail('${f.ticker}','${(f.name||'').replace(/'/g,"\\'")}')">
+      ${f.name||f.ticker}
+      <span class="remove" onclick="event.stopPropagation();toggleFav('${f.ticker}','${(f.name||'').replace(/'/g,"\\'")}')">✕</span>
+    </span>`
+  ).join('') : '<span class="empty">点关注列表的 ☆ 添加到自选</span>';
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <!-- Market Status -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="font-size:0.85em;color:var(--muted)">🕐 ${ms.text}</span>
+      <span style="font-size:0.78em;color:var(--muted)">|</span>
+      <span style="font-size:0.78em;color:var(--muted)">📡 新浪财经实时行情 (本地Express代理)</span>
+      <span style="font-size:0.78em;color:var(--muted)">|</span>
+      <span style="font-size:0.78em;color:var(--muted)">🔄 自动刷新: ${ms.open?'60秒':'5分钟'}</span>
+    </div>
+
+    <!-- Indices -->
+    <div class="card">
+      <div class="card-header"><h3>📈 市场指数</h3></div>
+      <div class="idx-grid">${idxHTML}</div>
+    </div>
+
+    <!-- Watchlist -->
+    <div class="card">
+      <div class="card-header">
+        <h3>👁️ 关注列表 (${stockData.length}只) — 10板块全覆盖</h3>
+        <span style="font-size:0.75em;color:var(--muted)">点击行查看详情 | ☆ 加自选</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>代码</th><th>名称</th><th>最新价</th><th>涨跌</th><th>涨跌幅</th>
+            <th>成交量</th><th>成交额</th><th>趋势</th><th>信号</th><th>操作</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Favorites -->
+    <div class="card">
+      <div class="card-header"><h3>⭐ 我的自选 (${favs.length}只)</h3></div>
+      <div class="fav-chips">${favHTML}</div>
+    </div>
+
+    <!-- Quick tips -->
+    <div class="card" style="font-size:0.78em;color:var(--muted);line-height:1.8">
+      <strong>💡 使用提示：</strong>
+      🔍 搜索框支持代码/名称/拼音 · ⌨️ ↑↓键选择 · ↵回车查看详情 ·
+      📋 点击详情按钮查看个股新闻和完整信号分析 ·
+      ⭐ 自选股保存在浏览器中 ·
+      🔴 红涨绿跌(A股惯例) ·
+      📱 手机电脑都能用
+    </div>
+  `;
+
+  // Update status dot
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (ms.cls ? ' '+ms.cls : '');
+  document.getElementById('marketBadge').textContent = ms.text;
+  document.getElementById('refreshBtn').disabled = false;
+}
+
+function updateFooter(success, dataTimestamp) {
+  const info = document.getElementById('footerInfo');
+  if (success) {
+    let msg = `最后刷新: ${fmtTime(Date.now())}`;
+    if (dataTimestamp) {
+      const age = Math.floor((Date.now() - new Date(dataTimestamp).getTime()) / 60000);
+      msg += ` | 数据: ${age}分钟前 (jsDelivr CDN)`;
+    } else if (!isLocal || location.port!=='3000') {
+      msg += ' | 数据: jsDelivr CDN';
+    } else {
+      msg += ' | 数据: 新浪实时';
+    }
+    info.textContent = msg;
+  } else {
+    info.textContent = '刷新失败 — 请检查网络';
+  }
+}
+
+// ==================== DETAIL MODAL ====================
+async function showDetail(ticker, name) {
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  overlay.classList.add('show');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+
+  // Find in current data
+  const stock = stockData.find(s=>s.tk===ticker);
+  const q = stock?.quote;
+  const sig = q ? analyzeSignal(q) : null;
+
+  // Fetch news
+  const news = await fetchNews(ticker);
+
+  const favs = getFavs();
+  const isFav = favs.find(f=>f.ticker===ticker);
+
+  content.innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>${name} <span style="font-size:0.7em;color:var(--muted)">${ticker}</span></h2>
+
+    ${q ? `
+    <!-- Price & Signal -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="font-size:2em;font-weight:700">¥${q.price.toFixed(2)}</div>
+      <div class="${(q.change||0)>=0?'up':'down'}" style="font-size:1.1em">
+        ${(q.change||0)>=0?'+':''}${fmtNum(q.change)} (${(q.changePercent||0)>=0?'+':''}${fmtNum(q.changePercent)}%)
+      </div>
+      ${sig?`<span class="signal-badge ${sig.cls}" style="font-size:0.9em;padding:4px 12px">${sig.text} · ${sig.score}分</span>`:''}
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+      <div class="info-item"><div class="label">开盘价</div><div class="value">¥${fmtNum(q.open)}</div></div>
+      <div class="info-item"><div class="label">昨收价</div><div class="value">¥${fmtNum(q.prevClose)}</div></div>
+      <div class="info-item"><div class="label">最高价</div><div class="value">¥${fmtNum(q.high)}</div></div>
+      <div class="info-item"><div class="label">最低价</div><div class="value">¥${fmtNum(q.low)}</div></div>
+      <div class="info-item"><div class="label">成交量</div><div class="value">${fmtVol(q.volume)}</div></div>
+      <div class="info-item"><div class="label">成交额</div><div class="value">${fmtAmt(q.amount)}</div></div>
+    </div>
+
+    ${sig ? `
+    <!-- Signal Details -->
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="font-size:0.85em;color:var(--muted);margin-bottom:10px">⚡ 实时信号分析</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:0.82em">
+        <div>📊 评分: <b>${sig.score}/100</b></div>
+        <div>📈 涨跌: <b>${sig.details.vsClose}</b></div>
+        <div>📐 振幅: <b>${sig.details.amplitude}</b></div>
+        <div>📍 价格位置: <b>${sig.details.pos}</b></div>
+        <div>🔀 方向: <b>${sig.details.direction}</b></div>
+        <div>📊 量能: <b>${sig.details.volume}</b></div>
+      </div>
+      <p style="font-size:0.7em;color:var(--muted);margin-top:8px">信号基于当日盘中数据计算，仅供参考，不构成投资建议</p>
+    </div>
+    `:''}
+    ` : '<p style="color:var(--muted)">暂无实时行情数据</p>'}
+
+    <!-- News -->
+    <div class="card">
+      <h3 style="font-size:0.85em;color:var(--muted);margin-bottom:10px">📰 最新资讯 (${news.length}条)</h3>
+      ${news.length ? news.map(n=>`
+        <div class="news-item">
+          <a href="${n.url}" target="_blank">${n.title}</a>
+          <div class="news-src">新浪财经</div>
+        </div>
+      `).join('') : '<p style="font-size:0.82em;color:var(--muted)">暂无相关新闻</p>'}
+    </div>
+
+    <!-- External Links -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <a href="https://finance.sina.com.cn/realstock/company/${ticker.replace('.SS','sh').replace('.SZ','sz')}/nc.shtml"
+         target="_blank" class="btn">🔗 新浪个股页</a>
+      <a href="https://guba.eastmoney.com/list,${ticker.replace(/\.\w+$/,'')}.html"
+         target="_blank" class="btn">💬 东方财富股吧</a>
+      <button class="btn" onclick="toggleFav('${ticker}','${name.replace(/'/g,"\\'")}');showDetail('${ticker}','${name.replace(/'/g,"\\'")}')">
+        ${isFav?'⭐ 取消自选':'☆ 加入自选'}
+      </button>
+    </div>
+
+    <p style="font-size:0.7em;color:var(--muted);margin-top:16px">⚠️ 免责声明：以上数据来自新浪财经公开API，信号分析仅基于当日盘中数据，不构成任何投资建议。投资有风险，入市需谨慎。</p>
+  `;
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+// ==================== FAVORITES ====================
+function toggleFav(ticker, name) {
+  let favs = getFavs();
+  const idx = favs.findIndex(f=>f.ticker===ticker);
+  let msg;
+  if (idx>=0) { favs.splice(idx,1); msg = `已移除: ${name||ticker}`; }
+  else { favs.push({ticker,name,addedAt:new Date().toISOString()}); msg = `已加入: ${name||ticker}`; }
+  saveFavs(favs);
+  renderAll();
+  showToast(msg);
+}
+
+// ==================== SEARCH ====================
+let searchTimer, searchIdx = -1;
+const searchCache = new Map();
+
+async function handleSearch() {
+  clearTimeout(searchTimer);
+  const q = document.getElementById('searchInput').value.trim();
+  const box = document.getElementById('searchResults');
+  if (!q) { box.style.display='none'; searchIdx=-1; return; }
+
+  if (searchCache.has(q)) {
+    renderSearchResults(searchCache.get(q));
+    return;
+  }
+
+  searchTimer = setTimeout(async () => {
+    box.innerHTML = '<div style="padding:14px;color:var(--muted)">🔍 搜索中...</div>';
+    box.style.display = 'block';
+    const results = await searchStocks(q);
+    searchCache.set(q, results);
+    if (searchCache.size > 50) searchCache.clear(); // prevent memory leak
+    renderSearchResults(results);
+  }, 250);
+}
+
+function renderSearchResults(results) {
+  const box = document.getElementById('searchResults');
+  searchIdx = -1;
+  if (!results.length) {
+    box.innerHTML = '<div style="padding:14px;color:var(--muted)">未找到匹配股票</div>';
+    return;
+  }
+  box.innerHTML = results.map((r,i) =>
+    `<div class="sr-item" data-idx="${i}" onclick="selectSearch('${r.ticker}')">
+      <span><span class="sr-name">${r.name}</span> <span class="sr-code">${r.ticker}</span></span>
+      <span class="sr-exch">${r.exchange}</span>
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function handleSearchKey(e) {
+  const box = document.getElementById('searchResults');
+  const items = box.querySelectorAll('.sr-item');
+  if (!items.length) return;
+
+  if (e.key==='ArrowDown') {
+    e.preventDefault();
+    searchIdx = Math.min(searchIdx+1, items.length-1);
+    updateSearchHighlight(items);
+  } else if (e.key==='ArrowUp') {
+    e.preventDefault();
+    searchIdx = Math.max(searchIdx-1, 0);
+    updateSearchHighlight(items);
+  } else if (e.key==='Enter') {
+    e.preventDefault();
+    if (searchIdx>=0 && items[searchIdx]) {
+      items[searchIdx].click();
+    }
+  } else if (e.key==='Escape') {
+    box.style.display = 'none';
+    searchIdx = -1;
+    document.getElementById('searchInput').blur();
+  }
+}
+
+function updateSearchHighlight(items) {
+  items.forEach((el,i) => {
+    if (i===searchIdx) el.style.background = 'var(--surface2)';
+    else el.style.background = '';
+  });
+}
+
+function selectSearch(ticker) {
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('searchInput').value = ticker;
+  searchIdx = -1;
+  // Find name and show detail
+  const found = stockData.find(s=>s.tk===ticker);
+  showDetail(ticker, found?.nm||ticker);
+}
+
+// Close search on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('searchResults').style.display = 'none';
+    searchIdx = -1;
+  }
+});
+
+// Keyboard shortcut: Ctrl+K for search
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey||e.metaKey) && e.key==='k') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+// ==================== TOAST ====================
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ==================== REFRESH SCHEDULER ====================
+function scheduleNextRefresh() {
+  clearTimeout(refreshTimer);
+  const interval = getRefreshInterval();
+  refreshTimer = setTimeout(() => {
+    refreshAll();
+  }, interval);
+}
+
+// ==================== INIT ====================
+// Update status indicator immediately
+(function updateStatus() {
+  const ms = getMarketStatus();
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (ms.cls ? ' '+ms.cls : '');
+  dot.title = ms.text;
+  document.getElementById('marketBadge').textContent = ms.text;
+})();
+
+// Load data on page load
+refreshAll();
+
+// Also set up periodic status check
+setInterval(() => {
+  const ms = getMarketStatus();
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (ms.cls ? ' '+ms.cls : '');
+  document.getElementById('marketBadge').textContent = ms.text;
+}, 30000);
+</script>
+</body>
+</html>
