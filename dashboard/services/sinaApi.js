@@ -8,30 +8,49 @@ const http = require('http');
 const https = require('https');
 const iconv = require('iconv-lite');
 
-// ── HTTP 工具 ────────────────────────────────────────────────────────────
-function httpGet(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    const client = url.startsWith('https') ? https : http;
-    const req = client.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://finance.sina.com.cn/',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-        ...options.headers
-      }
-    }, (res) => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        const buf = Buffer.concat(chunks);
-        // 新浪 API 全系列 GBK 编码 — 不依赖 Content-Type 头
-        const text = iconv.decode(buf, 'gbk');
-        resolve({ text, status: res.statusCode });
+// ── HTTP 工具（含重试）───────────────────────────────────────────────────
+async function httpGet(url, options = {}) {
+  const maxRetries = options.retries || 2;
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      // 指数退避: 200ms, 400ms
+      await new Promise(r => setTimeout(r, 200 * Math.pow(2, attempt - 1)));
+    }
+
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const client = url.startsWith('https') ? https : http;
+        const req = client.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://finance.sina.com.cn/',
+            'Accept-Language': 'zh-CN,zh;q=0.9',
+            ...options.headers
+          }
+        }, (res) => {
+          const chunks = [];
+          res.on('data', c => chunks.push(c));
+          res.on('end', () => {
+            const buf = Buffer.concat(chunks);
+            // 新浪 API 全系列 GBK 编码 — 不依赖 Content-Type 头
+            const text = iconv.decode(buf, 'gbk');
+            resolve({ text, status: res.statusCode });
+          });
+        });
+        req.on('error', reject);
+        req.setTimeout(options.timeout || 8000, () => { req.destroy(); reject(new Error('timeout')); });
       });
-    });
-    req.on('error', reject);
-    req.setTimeout(options.timeout || 8000, () => { req.destroy(); reject(new Error('timeout')); });
-  });
+      return result;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        console.error(`[SinaAPI] ${url.substring(0,60)}... 重试 ${attempt+1}/${maxRetries}: ${err.message}`);
+      }
+    }
+  }
+  throw lastError;
 }
 
 // ── 股票搜索 ──────────────────────────────────────────────────────────────

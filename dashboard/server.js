@@ -14,6 +14,7 @@
 'use strict';
 
 const express = require('express');
+const compression = require('compression');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -39,6 +40,22 @@ const CACHE_TTL = {
   indices:       60 * 1000,
   analysis:      60 * 60 * 1000,
 };
+
+// Simple rate limiter
+const rateLimits = new Map();
+function checkRateLimit(ip, limit=60, windowMs=60000) {
+  const now = Date.now();
+  const record = rateLimits.get(ip) || { count: 0, reset: now + windowMs };
+  if (now > record.reset) { record.count = 0; record.reset = now + windowMs; }
+  record.count++;
+  rateLimits.set(ip, record);
+  return record.count <= limit;
+}
+// Clean stale rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, r] of rateLimits) { if (now > r.reset) rateLimits.delete(ip); }
+}, 300000);
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -529,7 +546,17 @@ function scanReports() {
 const app = express();
 
 // Middleware
+app.use(compression()); // Gzip/brotli 压缩
 app.use(express.json()); // 全局 JSON 解析
+
+// Rate limiter for API endpoints
+app.use('/api/', (req, res, next) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip, 120, 60000)) {
+    return res.status(429).json({ error: '请求过于频繁，请稍后再试', retryAfter: '60秒' });
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -549,18 +576,38 @@ app.use((req, res, next) => {
   next();
 });
 
-// Static files
-app.use(express.static(PUBLIC_DIR, { maxAge: 60 * 1000 }));
-app.use('/reports', express.static(REPORTS_DIR, { maxAge: 60 * 1000 }));
+// Static files with optimized caching
+const staticOptions = {
+  maxAge: 5 * 60 * 1000,        // 5 min cache
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=60'); // HTML: 1 min
+    } else if (filePath.endsWith('.json')) {
+      res.setHeader('Cache-Control', 'public, max-age=120'); // JSON: 2 min
+    }
+  }
+};
+app.use(express.static(PUBLIC_DIR, staticOptions));
+app.use('/reports', express.static(REPORTS_DIR, { maxAge: 10 * 60 * 1000 }));
 
 // -- API Routes ---------------------------------------------------------------
 
 /**
  * GET /api/health
- * Health check + server stats.
+ * Health check + server stats + data source connectivity.
  */
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   const mem = process.memoryUsage();
+
+  // Test Sina API connectivity
+  let sinaStatus = 'unknown';
+  try {
+    const testQuote = await sinaApi.getQuote('000001.SS');
+    sinaStatus = testQuote && testQuote.name ? 'connected' : 'degraded';
+  } catch { sinaStatus = 'error'; }
+
   res.json({
     status: 'ok',
     uptime: Math.floor(process.uptime()),
@@ -570,6 +617,10 @@ app.get('/api/health', (req, res) => {
     },
     nodeVersion: process.version,
     platform: process.platform,
+    dataSources: {
+      sina: sinaStatus,
+    },
+    marketStatus: getMarketStatus(),
     timestamp: new Date().toISOString(),
   });
 });

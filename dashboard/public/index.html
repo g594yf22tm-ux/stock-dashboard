@@ -354,6 +354,7 @@
 
   <!-- 右侧信息 -->
   <div class="header-info">
+    <a href="/reports.html" class="btn" style="text-decoration:none">📄 报告</a>
     <div id="marketBadge" class="market-badge closed">
       <span class="dot off"></span> 加载中...
     </div>
@@ -481,7 +482,7 @@ async function get(url) {
 const F = {
   price(v) { if (v==null) return '—'; const n = +v; return n >= 1000 ? n.toFixed(2) : n.toFixed(2); },
   pct(v) { if (v==null) return '—'; const n = +v; return (n>0?'+':'') + n.toFixed(2) + '%'; },
-  vol(v) { if (!v) return '—'; const n = +v; return n>=1e8 ? (n/1e8).toFixed(1)+'亿' : n>=1e4 ? (n/1e4).toFixed(1)+'万' : n.toString(); },
+  vol(v) { if (!v) return '—'; const n = +v; return n>=1e8 ? (n/1e8).toFixed(1)+'亿手' : n>=1e4 ? (n/1e4).toFixed(1)+'万手' : n.toFixed(0)+'手'; },
   cap(v) { if (!v) return '—'; const n = +v; return (n/1e8).toFixed(0); },
   dir(v) { const n = +v; return n>0 ? 'up' : n<0 ? 'down' : ''; },
   t() { return new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'}); },
@@ -489,9 +490,11 @@ const F = {
   stars(n) { n = Math.max(1, Math.min(5, Math.round(n))); return '★'.repeat(n) + '☆'.repeat(5-n); }
 };
 
-// 市场状态
+// 市场状态（北京时间 UTC+8）
 function getMarketStatus() {
-  const now = new Date(), day = now.getDay(), h = now.getHours(), m = now.getMinutes();
+  const now = new Date();
+  const bj = new Date(now.getTime() + 8*3600*1000); // 转为北京时间
+  const day = bj.getUTCDay(), h = bj.getUTCHours(), m = bj.getUTCMinutes();
   if (day === 0 || day === 6) return { status:'CLOSED', text:'周末休市', cls:'closed' };
   const t = h * 60 + m;
   if (t < 9*60+15) return { status:'CLOSED', text:'等待开盘', cls:'closed' };

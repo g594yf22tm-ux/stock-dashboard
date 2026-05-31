@@ -260,6 +260,12 @@ tr:hover { background:rgba(255,255,255,0.02); }
 // ==================== CONFIG ====================
 const PROXY = 'https://api.allorigins.win/raw?url=';
 const FALLBACK_PROXY = 'https://corsproxy.io/?';
+const PROXY_KEY = 'a_stock_proxy_v2';
+
+function getSavedProxy() {
+  try { return localStorage.getItem(PROXY_KEY) || PROXY; } catch { return PROXY; }
+}
+function saveProxy(url) { try { localStorage.setItem(PROXY_KEY, url); } catch {} }
 
 const WATCHLIST = [
   { tk:'002027.SZ', nm:'分众传媒', sc:'📺 传媒·广告' },
@@ -285,7 +291,7 @@ const FAVS_KEY = 'a_stock_favs_v2';
 // ==================== STATE ====================
 let stockData = [];
 let indexData = [];
-let currentProxy = PROXY;
+let currentProxy = getSavedProxy(); // 持久化可用的代理
 let lastRefresh = null;
 let refreshTimer = null;
 
@@ -299,10 +305,11 @@ function fmtNum(n, d) {
 }
 
 function fmtVol(v) {
+  // Sina fields[8] = 成交量(手), A股以万手为单位显示
   if (!v || v<=0) return '--';
-  if (v>=1e8) return (v/1e8).toFixed(2)+'亿';
-  if (v>=1e4) return (v/1e4).toFixed(0)+'万';
-  return v.toString();
+  if (v>=1e8) return (v/1e8).toFixed(2)+'亿手';
+  if (v>=1e4) return (v/1e4).toFixed(0)+'万手';
+  return (v||0).toFixed(0)+'手';
 }
 
 function fmtAmt(a) {
@@ -358,7 +365,8 @@ async function fetchText(url) {
       if (text && text.length > 20) {
         if (proxy !== currentProxy) {
           currentProxy = proxy;
-          console.log('Switched to fallback proxy');
+          saveProxy(proxy); // 持久化可用的代理
+          console.log('Switched to fallback proxy, saved');
         }
         return text;
       }
@@ -507,21 +515,22 @@ function analyzeSignal(q) {
   };
 }
 
-// Sparkline data (last 5 days)
+// Sparkline — deterministic visual based on change percent
 function renderSparkline(changePercent) {
-  // Simple visual indicator based on change
   const bars = 8;
-  const pct = Math.abs(changePercent||0);
-  const up = changePercent>=0;
+  const up = (changePercent||0) >= 0;
+  const intensity = Math.min(Math.abs(changePercent||0) / 10, 1); // 0-1 scale
+  const color = up ? 'var(--up)' : 'var(--down)';
+  // Use a simple hash of changePercent for deterministic pseudo-data
+  const seed = Math.abs(Math.round((changePercent||0)*100));
   const heights = [];
-  // Generate pseudo-sparkline bars
   for (let i=0;i<bars;i++) {
-    const base = 0.2+Math.random()*0.3;
-    const trend = up ? (i/bars)*0.5 : (1-i/bars)*0.5;
-    heights.push(base+trend+(i%2)*0.15);
+    // Deterministic pseudo-random based on seed and position
+    const h = 0.3 + 0.4*intensity + 0.3*((seed*(i+1)*7)%100)/100;
+    heights.push(Math.min(1, h));
   }
   return '<div class="sparkline">'+heights.map(h =>
-    `<span style="height:${Math.round(h*24)}px;background:${up?'var(--up)':'var(--down)'}"></span>`
+    `<span style="height:${Math.round(h*24)}px;background:${color}"></span>`
   ).join('')+'</div>';
 }
 
