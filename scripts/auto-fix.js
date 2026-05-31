@@ -220,6 +220,21 @@ function checkReports() {
   return files.length > 0;
 }
 
+// ── 检查7: Playwright可视化验证 ────────────────────────────────────────
+async function checkVisual() {
+  section('可视化验证 (Playwright)');
+  try {
+    const { execSync } = require('child_process');
+    execSync('node scripts/visual-check.js', {
+      cwd: ROOT, stdio: 'pipe', timeout: 60000
+    });
+    ok('所有页面渲染正常');
+  } catch (e) {
+    fail('可视化验证失败: ' + e.message.substring(0, 80));
+    issueCount++;
+  }
+}
+
 // ── 主流程 ──────────────────────────────────────────────────────────────
 async function main() {
   console.log(colors.cyan + '╔══════════════════════════════════════════╗');
@@ -239,6 +254,9 @@ async function main() {
     checkPageSyntax();
     checkReports();
     await checkPort();
+    if (process.argv.includes('--visual')) {
+      await checkVisual();
+    }
 
     // ── 总结 ──
     console.log('\n' + '━'.repeat(50));

@@ -282,6 +282,17 @@ npm run screenshot       # 处理截图文件
 
 ---
 
+
+
+## Playwright
+
+修改任何前端代码(HTML/JS/CSS)或 API 后必须运行:
+
+    npm run visual-check
+
+验证: 主仪表盘/standalone/报告浏览/报告查看/搜索/详情弹窗
+未通过即修复直到通过。使用系统Edge浏览器。
+
 ## 快速开始
 
 ```bash

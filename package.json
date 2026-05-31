@@ -8,6 +8,7 @@
     "v2": "node scripts/auto-fix.js && node dashboard/server.js",
     "v2:watchdog": "node scripts/watchdog.js",
     "v2:auto": "node scripts/auto-fix.js",
+    "v2:visual": "node scripts/auto-fix.js --visual",
     "dashboard": "node dashboard/server.js",
     "dashboard:fetch": "node scripts/fetch-sina-data.js",
     "dashboard:build": "node dashboard/server.js --build",
