@@ -14,8 +14,7 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;backgr
 table{width:100%;border-collapse:collapse;font-size:0.85em}
 th{background:var(--surface);padding:8px 10px;text-align:left;color:var(--muted);border-bottom:2px solid var(--border);font-size:0.8em}
 td{padding:8px 10px;border-bottom:1px solid var(--border)}
-.up{color:var(--up)}.down{color:var(--down)}
-.star{color:var(--accent)}
+.up{color:var(--up)}.down{color:var(--down)}.star{color:var(--accent)}
 .loading{text-align:center;padding:30px;color:var(--muted)}
 .empty{text-align:center;padding:20px;color:var(--muted);font-size:0.85em}
 .footer{text-align:center;padding:16px;color:var(--muted);font-size:0.75em}
@@ -26,48 +25,68 @@ td{padding:8px 10px;border-bottom:1px solid var(--border)}
   <button class="refresh" onclick="loadAll()">🔄</button>
 </div>
 <div class="container" id="app"><div class="loading">加载中...</div></div>
-<div class="footer">GitHub Pages 托管 | 新浪财经实时数据 | 24小时在线 | 仅供参考</div>
+<div class="footer">Netlify 托管 | 新浪财经实时数据 | 24小时在线 | 仅供参考</div>
 <script>
+// JSONP 方式调用新浪API（绕过CORS）
+function jsonp(url,cb){
+  const s=document.createElement('script');
+  const g='_jsonp'+Date.now()+Math.random().toString(36).slice(2);
+  window[g]=function(data){cb(data);delete window[g];s.remove()};
+  s.src=url+(url.includes('?')?'&':'?')+'callback='+g;
+  s.onerror=function(){cb(null);delete window[g];s.remove()};
+  document.head.appendChild(s);
+}
+
+// 用script标签加载新浪行情（返回var hq_str_xxx="..."，天然是JS）
+function sinaQuote(tickers,cb){
+  const codes=tickers.map(t=>{const p=t.split('.');return(p[1].toLowerCase()==='ss'?'sh':'sz')+p[0]}).join(',');
+  const key='_sq'+Date.now();
+  window[key]={done:false,data:[]};
+  const s=document.createElement('script');
+  s.src='https://hq.sinajs.cn/list='+codes;
+  s.onload=function(){
+    setTimeout(function(){
+      const re=/var hq_str_(\w+)="([^"]*)"/g;let m;const out=[];
+      const html=document.body.innerHTML;
+      // Parse from global scope
+      for(const code of codes.split(',')){
+        const varName='hq_str_'+code;
+        const val=window[varName];
+        if(typeof val==='string'){
+          const f=val.split(',');
+          if(f.length>30){
+            const tk=code.startsWith('sh')?code.slice(2)+'.SS':code.slice(2)+'.SZ';
+            out.push({ticker:tk,name:f[0],price:+f[3],prevClose:+f[2],open:+f[1],high:+f[4],low:+f[5],volume:+f[8],amount:+f[9]});
+          }
+        }
+      }
+      cb(out);s.remove();
+    },100);
+  };
+  s.onerror=function(){cb([]);s.remove()};
+  document.head.appendChild(s);
+}
+
 const FAVS_KEY='stock_favs';
 function getFavs(){try{return JSON.parse(localStorage.getItem(FAVS_KEY))||[]}catch{return[]}}
 function saveFavs(arr){localStorage.setItem(FAVS_KEY,JSON.stringify(arr))}
-
-async function sinaQuote(tickers){
-  const codes=tickers.map(t=>{const p=t.split('.');return(p[1].toLowerCase()==='ss'?'sh':'sz')+p[0]}).join(',');
-  const resp=await fetch('https://hq.sinajs.cn/list='+codes,{headers:{Referer:'https://finance.sina.com.cn/'}});
-  const text=await resp.text();
-  const re=/var hq_str_(\w+)="([^"]*)"/g;let m,out=[];
-  while((m=re.exec(text))){const f=m[2].split(',');if(f.length>30)out.push({ticker:(m[1].startsWith('sh')?m[1].slice(2)+'.SS':m[1].slice(2)+'.SZ'),name:f[0],price:+f[3],prevClose:+f[2],open:+f[1],high:+f[4],low:+f[5],volume:+f[8],amount:+f[9]})}
-  return out;
-}
 
 const WATCHLIST=['600519.SS','300750.SZ','002594.SZ','600900.SS','600036.SS','601899.SS','600031.SS','600887.SS','002027.SZ','000001.SZ'];
 const IDX=['000001.SS','399001.SZ','399006.SZ'];
 
 async function loadAll(){
-  try{
-    const all=WATCHLIST.concat(IDX);
-    const data=await sinaQuote(all);
+  document.getElementById('app').innerHTML='<div class="loading">正在获取实时行情...</div>';
+  const all=WATCHLIST.concat(IDX);
+  sinaQuote(all,function(data){
+    if(!data||!data.length){document.getElementById('app').innerHTML='<div class="loading">❌ 数据加载失败<br><small>请刷新重试</small></div>';return}
     const idxData=data.filter(d=>IDX.includes(d.ticker));
     const stkData=data.filter(d=>WATCHLIST.includes(d.ticker));
     const favs=getFavs();
-    document.getElementById('app').innerHTML=`
-      <div class="card"><h3>📈 市场指数</h3>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">${idxData.map(i=>`
-          <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:10px 14px;flex:1;min-width:140px">
-            <div style="font-size:0.8em;color:var(--muted)">${i.name}</div>
-            <div style="font-size:1.2em;font-weight:700">${i.price.toFixed(2)}</div>
-            <div class="${(i.price-i.prevClose)>=0?'up':'down'}">${(i.price-i.prevClose>=0?'+':'')+(i.price-i.prevClose).toFixed(2)} (${((i.price-i.prevClose)/i.prevClose*100).toFixed(2)}%)</div>
-          </div>`).join('')}</div>
-      </div>
-      <div class="card"><h3>👁️ 关注列表 (${stkData.length}只)</h3>
-        <div style="overflow-x:auto"><table><thead><tr><th>代码</th><th>名称</th><th>最新价</th><th>涨跌幅</th><th>成交量</th><th>操作</th></tr></thead><tbody>
-        ${stkData.map(s=>`<tr><td><b>${s.ticker}</b></td><td>${s.name}</td><td>¥${s.price.toFixed(2)}</td><td class="${(s.price-s.prevClose)>=0?'up':'down'}">${(s.price-s.prevClose>=0?'+':'')+(s.price-s.prevClose).toFixed(2)} (${((s.price-s.prevClose)/s.prevClose*100).toFixed(2)}%)</td><td>${(s.volume/10000).toFixed(0)}万手</td><td><button style="background:0;border:0;cursor:pointer;font-size:1.1em" onclick="toggleFav('${s.ticker}','${s.name}')">${favs.find(f=>f.ticker===s.ticker)?'⭐':'☆'}</button></td></tr>`).join('')}
-        </tbody></table></div></div>
-      <div class="card"><h3>⭐ 我的自选 (${favs.length}只)</h3>
-        <div id="favSection">${favs.length?favs.map(f=>`<span style="display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;margin:4px;font-size:0.85em;cursor:pointer" onclick="toggleFav('${f.ticker}','${f.name}')">${f.name||f.ticker} ✕</span>`).join(''):'<div class="empty">点关注列表的 ☆ 添加自选</div>'}</div>
-      </div>`;
-  }catch(e){document.getElementById('app').innerHTML='<div class="loading">加载失败: '+e.message+'<br>请检查网络</div>'}
+    document.getElementById('app').innerHTML=
+      '<div class="card"><h3>📈 市场指数</h3><div style="display:flex;gap:12px;flex-wrap:wrap">'+idxData.map(i=>'<div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:10px 14px;flex:1;min-width:140px"><div style="font-size:0.8em;color:var(--muted)">'+i.name+'</div><div style="font-size:1.2em;font-weight:700">'+i.price.toFixed(2)+'</div><div class="'+(i.price>=i.prevClose?'up':'down')+'">'+(i.price>=i.prevClose?'+':'')+(i.price-i.prevClose).toFixed(2)+' ('+((i.price-i.prevClose)/i.prevClose*100).toFixed(2)+'%)</div></div>').join('')+'</div></div>'+
+      '<div class="card"><h3>👁️ 关注列表 ('+stkData.length+'只)  <span style="font-size:0.7em;color:var(--muted)">点击☆加自选</span></h3><div style="overflow-x:auto"><table><thead><tr><th>代码</th><th>名称</th><th>最新价</th><th>涨跌幅</th><th>成交量</th><th>自选</th></tr></thead><tbody>'+stkData.map(s=>{const chg=s.price-s.prevClose;const pct=(chg/s.prevClose*100).toFixed(2);return'<tr><td><b>'+s.ticker+'</b></td><td>'+s.name+'</td><td>¥'+s.price.toFixed(2)+'</td><td class="'+(chg>=0?'up':'down')+'">'+(chg>=0?'+':'')+chg.toFixed(2)+' ('+pct+'%)</td><td>'+(s.volume/10000).toFixed(0)+'万手</td><td><button style="background:0;border:0;cursor:pointer;font-size:1.1em" onclick="toggleFav(\''+s.ticker+'\',\''+s.name+'\')">'+(favs.find(f=>f.ticker===s.ticker)?'⭐':'☆')+'</button></td></tr>'}).join('')+'</tbody></table></div></div>'+
+      '<div class="card"><h3>⭐ 我的自选 ('+favs.length+'只)</h3><div id="favSection">'+(favs.length?favs.map(f=>'<span style="display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px;margin:4px;font-size:0.85em;cursor:pointer" onclick="toggleFav(\''+f.ticker+'\',\''+f.name+'\')">'+f.name+' ✕</span>').join(''):'<div class="empty">点关注列表的 ☆ 添加自选</div>')+'</div></div>';
+  });
 }
 
 function toggleFav(ticker,name){
@@ -77,21 +96,38 @@ function toggleFav(ticker,name){
 }
 
 let searchTimer;
-async function doSearch(){
+function doSearch(){
   clearTimeout(searchTimer);
   const q=document.getElementById('search').value.trim();
   const box=document.getElementById('results');
   if(!q){box.style.display='none';return}
-  searchTimer=setTimeout(async()=>{
+  searchTimer=setTimeout(function(){
     box.innerHTML='<div style="padding:12px;color:var(--muted)">搜索中...</div>';box.style.display='block';
-    try{
-      const r=await fetch('https://suggest3.sinajs.cn/suggest/type=11,12&key='+encodeURIComponent(q),{headers:{Referer:'https://finance.sina.com.cn/'}});
-      const t=await r.text();const m=t.match(/"([^"]+)"/);if(!m){box.innerHTML='<div style="padding:12px">未找到</div>';return}
-      const items=m[1].split(';').filter(Boolean).slice(0,10);
-      box.innerHTML=items.map(e=>{const p=e.split(',');const name=p[0].startsWith('sh')||p[0].startsWith('sz')?p[4]:p[0];const code=p[0].startsWith('sh')||p[0].startsWith('sz')?p[0]:p[3];const mkt=code.startsWith('sh')?'SS':'SZ';const tk=code.replace(/^sh|^sz/,'')+'.'+mkt;return`<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border)" onclick="document.getElementById('search').value='${tk}';document.getElementById('results').style.display='none';loadAll()">${name} · ${tk}</div>`}).join('');
-    }catch{box.innerHTML='<div style="padding:12px">搜索失败</div>'}
+    const s=document.createElement('script');
+    const g='_sug'+Date.now();
+    window[g]=function(data){};
+    s.src='https://suggest3.sinajs.cn/suggest/type=11,12&key='+encodeURIComponent(q);
+    s.onload=function(){
+      setTimeout(function(){
+        // 读取 suggestvalue 变量
+        const raw=window['suggestvalue']||'';
+        if(!raw){box.innerHTML='<div style="padding:12px">未找到</div>';s.remove();return}
+        const items=raw.split(';').filter(Boolean).slice(0,10);
+        box.innerHTML=items.map(function(e){
+          const p=e.split(',');let name,code;
+          if(p[0].startsWith('sh')||p[0].startsWith('sz')){code=p[0];name=p[4]||p[0]}else{name=p[0];code=p[3]||''}
+          const mkt=code.startsWith('sh')?'SS':'SZ';const tk=code.replace(/^sh|^sz/,'')+'.'+mkt;
+          return '<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border)" onclick="document.getElementById(\'search\').value=\''+tk+'\';document.getElementById(\'results\').style.display=\'none\';loadAll()">'+name+' · <b>'+tk+'</b></div>';
+        }).join('');
+        s.remove();
+      },100);
+    };
+    s.onerror=function(){box.innerHTML='<div style="padding:12px">搜索失败</div>';s.remove()};
+    document.head.appendChild(s);
   },300);
 }
 
-loadAll();setInterval(loadAll,120000);
+document.addEventListener('click',function(e){if(!e.target.closest('.search-wrap'))document.getElementById('results').style.display='none'});
+loadAll();
+setInterval(loadAll,120000);
 </script></body></html>
