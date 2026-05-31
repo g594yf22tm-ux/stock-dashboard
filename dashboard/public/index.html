@@ -471,9 +471,43 @@ const API = {
   analyze: '/api/analyze'
 };
 
+// 远程模式的静态报告列表
+const EMBEDDED_REPORTS = [{filename:'600036_招商银行_deep_dive_2026-05-31.md',title:'招商银行 deep dive',date:'2026-05-31'},{filename:'600900_长江电力_deep_dive_2026-05-31.md',title:'长江电力 deep dive',date:'2026-05-31'},{filename:'600887_伊利股份_deep_dive_2026-05-31.md',title:'伊利股份 deep dive',date:'2026-05-31'},{filename:'601899_紫金矿业_deep_dive_2026-05-31.md',title:'紫金矿业 deep dive',date:'2026-05-31'},{filename:'002027_分众传媒_deep_dive_2026-05-31.md',title:'分众传媒 deep dive',date:'2026-05-31'}];
+
 // ── 排序状态 ─────────────────────────────────────────────────────────────
 let sortState = { col: null, asc: false };
+const isRemote = !(location.hostname==='localhost'||location.hostname==='127.0.0.1');
+const CDN = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
+
+async function fetchCDN(file) {
+  try { const r = await fetch(CDN+'/'+file, {cache:'no-cache'}); if (r.ok) return r.json(); }
+  catch(e) { console.error('CDN:', e.message); }
+  return null;
+}
+
 async function get(url) {
+  // 远程模式: CDN数据
+  if (isRemote) {
+    if (url===API.market||url===API.watchlist||url===API.watchlistLive||url===API.analysis) {
+      const file = url.replace('/api/','').replace('/live','')+'.json';
+      const data = await fetchCDN(file);
+      if (data) {
+        // 转换数据格式兼容现有渲染
+        if (url===API.watchlistLive) return { stocks: data.stocks||[], trending: [], source: 'CDN', timestamp: data.timestamp };
+        if (url===API.watchlist) return data;
+        if (url===API.analysis) return { recommendations: (data.analyses||[]).map(a=>({ticker:a.ticker,name:a.name,fundamentalView:a.fundamental?.view||'',technicalView:a.technical?.view||'',riskView:(a.risks||[]).join('；'),recommendation:a.recommendation?.signal||'HOLD',scores:{fundamental:(a.fundamental?.signalStrength||0.5)*10,technical:(a.technical?.signalStrength||0.5)*10,risk:(a.insider?.signalStrength||0.5)*10}}))};
+        return data; // market.json as-is
+      }
+      return null;
+    }
+    if (url===API.favorites) {
+      try { const f=JSON.parse(localStorage.getItem('stock_favs_v2')||'[]'); return {favorites:f,count:f.length}; }
+      catch { return {favorites:[],count:0}; }
+    }
+    if (url===API.reports) return { reports: EMBEDDED_REPORTS||[] };
+    return null;
+  }
+  // 本地模式: Express API
   try { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
   catch(e) { console.error('Fetch error:', url, e.message); return null; }
 }
@@ -975,6 +1009,16 @@ function closeDetail() {
 
 // ── 自选股 ──────────────────────────────────────────────────────────────
 async function addFav(ticker, name) {
+  if (isRemote) {
+    let favs = JSON.parse(localStorage.getItem('stock_favs_v2')||'[]');
+    if (!favs.find(f=>f.ticker===ticker)) {
+      favs.push({ticker, name, addedAt: new Date().toISOString()});
+      localStorage.setItem('stock_favs_v2', JSON.stringify(favs));
+      showToast('⭐ 已加入自选: '+name);
+      loadFavorites();
+    } else { showToast('💡 已在自选中'); }
+    return;
+  }
   try {
     const resp = await fetch(API.favAdd, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -987,6 +1031,14 @@ async function addFav(ticker, name) {
 }
 
 async function removeFav(ticker) {
+  if (isRemote) {
+    let favs = JSON.parse(localStorage.getItem('stock_favs_v2')||'[]');
+    favs = favs.filter(f=>f.ticker!==ticker);
+    localStorage.setItem('stock_favs_v2', JSON.stringify(favs));
+    showToast('已移出自选');
+    loadFavorites();
+    return;
+  }
   try {
     const resp = await fetch(API.favRemove, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
