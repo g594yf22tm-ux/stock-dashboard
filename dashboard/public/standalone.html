@@ -340,61 +340,71 @@ function getRefreshInterval() {
 }
 
 // ==================== 数据获取 ====================
-// 策略：同源时使用Express API（服务器端正确设置Referer），跨域时使用JSONP
+// 三层数据源: ① Express API (本地) ② jsDelivr CDN (远程, GitHub Actions推送) ③ 离线缓存
 
-const API_BASE = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? '' : '';
+const isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const CDN_BASE = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
+
+// CDN 数据获取（jsDelivr 全球CDN，中国可访问，GitHub Actions每10分钟更新）
+async function fetchCDN(file) {
+  try {
+    const r = await fetch(CDN_BASE + '/' + file, { cache: 'no-cache' });
+    if (r.ok) return await r.json();
+  } catch(e) { console.error('CDN fetch failed:', e.message); }
+  return null;
+}
 
 async function fetchQuotes(tickers) {
-  // 优先使用同源 Express API（无CORS，服务器端已正确设置Referer请求头）
-  if (!API_BASE && location.port==='3000') {
+  // ① 本地: Express API (实时数据)
+  if (isLocal && location.port==='3000') {
     try {
       const r = await fetch('/api/watchlist/live');
       if (r.ok) {
         const data = await r.json();
         return (data.stocks||[]).map(s => ({
-          ticker: s.ticker,
-          name: s.name,
-          open: +s.open||0,
-          prevClose: (+s.price||0) - (+s.change||0),
-          price: +s.price||0,
-          high: +s.high||0,
-          low: +s.low||0,
-          volume: +s.volume||0,
-          amount: +s.amount||0,
-          change: +s.change||0,
-          changePercent: +s.changePercent||0,
-          time: ''
+          ticker: s.ticker, name: s.name, open: +s.open||0,
+          prevClose: (+s.price||0) - (+s.change||0), price: +s.price||0,
+          high: +s.high||0, low: +s.low||0, volume: +s.volume||0,
+          amount: +s.amount||0, change: +s.change||0,
+          changePercent: +s.changePercent||0, time: ''
         }));
       }
-    } catch(e) { console.error('API fetch failed:', e.message); }
+    } catch(e) { console.error('Local API failed:', e.message); }
   }
 
-  // 回退：返回空，避免乱码
-  console.error('无法获取数据：需要Express服务器运行中。请访问 http://localhost:3000/');
+  // ② 远程: jsDelivr CDN (GitHub Actions定时推送的数据)
+  const cdn = await fetchCDN('watchlist.json');
+  if (cdn && cdn.stocks) {
+    return cdn.stocks.map(s => ({
+      ticker: s.ticker, name: s.name, open: +s.open||0,
+      prevClose: (+s.price||0) - (+s.change||0), price: +s.price||0,
+      high: +s.high||0, low: +s.low||0, volume: +s.volume||0,
+      amount: +s.amount||0, change: +s.change||0,
+      changePercent: +s.changePercent||0, time: s.time||''
+    }));
+  }
+
   return [];
 }
 
 async function searchStocks(query) {
-  // 同源时使用 Express 搜索API
-  if (!API_BASE && location.port==='3000') {
+  if (isLocal && location.port==='3000') {
     try {
       const r = await fetch('/api/search?q='+encodeURIComponent(query));
       if (r.ok) {
         const data = await r.json();
         return (data.results||[]).map(r => ({
-          ticker: r.ticker,
-          name: r.name,
+          ticker: r.ticker, name: r.name,
           exchange: r.exchange||(r.ticker.endsWith('.SS')?'沪市':'深市')
         }));
       }
-    } catch(e) { console.error('Search API failed:', e.message); }
+    } catch(e) {}
   }
-  return [];
+  return []; // CDN模式不支持实时搜索
 }
 
 async function fetchNews(ticker) {
-  // 同源时使用 Express 新闻API
-  if (!API_BASE && location.port==='3000') {
+  if (isLocal && location.port==='3000') {
     try {
       const r = await fetch('/api/stock/'+encodeURIComponent(ticker)+'/news');
       if (r.ok) {
@@ -525,33 +535,57 @@ async function refreshAll() {
       }
     } catch(e) { console.error('API error:', e.message); }
   } else {
-    // 远程：尝试 JSONP
-    const allTickers = WATCHLIST.map(s=>s.tk).concat(INDICES.map(i=>i.tk));
-    const allData = await fetchQuotes(allTickers);
-    if (allData && allData.length>0) {
-      stockData = WATCHLIST.map(cfg => {
-        const q = allData.find(d=>d.ticker===cfg.tk);
-        return {...cfg, ...(q||{}), quote:q, signal:q?analyzeSignal(q):null};
-      });
-      indexData = INDICES.map(cfg => {
-        const q = allData.find(d=>d.ticker===cfg.tk);
-        return {...cfg, quote:q};
-      });
-      renderAll();
-      updateFooter(true);
-      lastRefresh = Date.now();
-      scheduleNextRefresh();
-      return;
-    }
+    // 远程：使用 jsDelivr CDN 数据 (GitHub Actions 每10分钟推送)
+    try {
+      const [marketCDN, watchCDN] = await Promise.all([
+        fetchCDN('market.json'),
+        fetchCDN('watchlist.json')
+      ]);
+
+      if (marketCDN && watchCDN) {
+        // 构建 indexData
+        const idxMap = marketCDN.indices || {};
+        indexData = INDICES.map(cfg => {
+          const q = idxMap[cfg.tk];
+          return {...cfg, quote: q ? {price: q.price, change: q.change, changePercent: q.changePercent} : null};
+        });
+
+        // 构建 stockData
+        stockData = WATCHLIST.map(cfg => {
+          const s = (watchCDN.stocks||[]).find(d=>d.ticker===cfg.tk);
+          const q = s ? {
+            ticker: s.ticker, name: s.name,
+            price: +s.price||0, open: +s.open||0,
+            prevClose: (+s.price||0) - (+s.change||0),
+            high: +s.high||0, low: +s.low||0,
+            volume: +s.volume||0, amount: +s.amount||0,
+            change: +s.change||0, changePercent: +s.changePercent||0,
+            time: s.time||''
+          } : null;
+          return {...cfg, quote:q, signal:q?analyzeSignal(q):null};
+        });
+
+        try {
+          renderAll();
+          updateFooter(true, marketCDN.timestamp);
+          lastRefresh = Date.now();
+          scheduleNextRefresh();
+          return;
+        } catch(e) {
+          console.error('Render error:', e.message);
+          app.innerHTML = '<div class="error-box"><p>❌ 渲染错误</p><p>'+e.message+'</p><button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重试</button></div>';
+          return;
+        }
+      }
+    } catch(e) { console.error('CDN error:', e.message); }
   }
 
   // 全部失败
   app.innerHTML = `<div class="error-box">
     <p>❌ 数据加载失败</p>
-    <p style="font-size:0.82em;margin-top:8px">${isLocal ? '请确保Express服务器正在运行' : '远程访问需要Express服务器配合local隧道'}</p>
-    <p style="font-size:0.75em;margin-top:4px;color:var(--muted)">💡 本地访问: <b>http://localhost:3000/standalone.html</b></p>
+    <p style="font-size:0.82em;margin-top:8px">${isLocal ? '请确保Express服务器正在运行' : 'CDN数据暂不可用，请稍后刷新'}</p>
+    <p style="font-size:0.75em;margin-top:4px;color:var(--muted)">💡 数据由 GitHub Actions 每10分钟自动更新</p>
     <button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重新加载</button>
-    ${!isLocal ? `<a href="http://localhost:3000/standalone.html" class="btn" style="margin-top:8px;display:inline-block;text-decoration:none">🔗 转到本地版</a>` : ''}
   </div>`;
   updateFooter(false);
 }
@@ -666,10 +700,19 @@ function renderAll() {
   document.getElementById('refreshBtn').disabled = false;
 }
 
-function updateFooter(success) {
+function updateFooter(success, dataTimestamp) {
   const info = document.getElementById('footerInfo');
   if (success) {
-    info.textContent = `最后刷新: ${fmtTime(Date.now())}`;
+    let msg = `最后刷新: ${fmtTime(Date.now())}`;
+    if (dataTimestamp) {
+      const age = Math.floor((Date.now() - new Date(dataTimestamp).getTime()) / 60000);
+      msg += ` | 数据: ${age}分钟前 (jsDelivr CDN)`;
+    } else if (!isLocal || location.port!=='3000') {
+      msg += ' | 数据: jsDelivr CDN';
+    } else {
+      msg += ' | 数据: 新浪实时';
+    }
+    info.textContent = msg;
   } else {
     info.textContent = '刷新失败 — 请检查网络';
   }
