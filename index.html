@@ -190,6 +190,7 @@
     .sector-item { background: var(--surface2); border-radius: 8px; padding: 10px; text-align: center; }
     .sector-item .sn { font-size: 0.78em; color: var(--muted); }
     .sector-item .sp { font-size: 1.05em; font-weight: 700; margin-top: 2px; }
+    .sector-tag { display:inline-block;font-size:0.65em;padding:1px 5px;border-radius:3px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);vertical-align:middle;margin-left:4px;white-space:nowrap; }
 
     /* 表格 */
     .table-wrap { overflow-x: auto; }
@@ -624,7 +625,7 @@ function applySortAndRender() {
     const peColor = s.pe > 80 ? 'var(--accent)' : s.pe > 40 ? 'var(--info)' : '';
     return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
       <td><b>${s.ticker}</b>${s._live?' <span style="font-size:0.65em;color:var(--up)">●</span>':''}</td>
-      <td><span class="stock-link">${s.name||s.ticker}</span></td>
+      <td><span class="stock-link">${s.name||s.ticker}</span>${s.sector?` <span class="sector-tag">${s.sector}</span>`:''}</td>
       <td>¥${F.price(s.price)}</td>
       <td class="${up?'up':'down'}">${(+s.change)>0?'+':''}${F.price(s.change)}</td>
       <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
@@ -1063,7 +1064,7 @@ async function loadFavorites() {
       const up = +(s.changePercent || 0) >= 0;
       return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
         <td><b>${s.ticker}</b></td>
-        <td><span class="stock-link">${s.name||s.ticker}</span></td>
+        <td><span class="stock-link">${s.name||s.ticker}</span>${s.sector?` <span class="sector-tag">${s.sector}</span>`:''}</td>
         <td>¥${F.price(s.price)}</td>
         <td class="${up?'up':'down'}">${F.pct(s.change)}</td>
         <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
