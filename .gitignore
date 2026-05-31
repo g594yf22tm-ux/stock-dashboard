@@ -20,10 +20,7 @@ screenshots/*
 # OCR 语言包（tesseract 自动下载）
 *.traineddata
 
-# 仪表盘缓存（自动生成，但自选和配置保留）
-dashboard/data/market.json
-dashboard/data/watchlist.json
-dashboard/data/analysis.json
+# 仪表盘缓存（提交到Git供CDN使用）
 dashboard/data/reports.json
 
 # 输出文件

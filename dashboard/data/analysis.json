@@ -1,0 +1,266 @@
+{
+  "timestamp": "2026-05-31T15:07:29.527Z",
+  "source": "新浪财经实时信号",
+  "analyses": [
+    {
+      "ticker": "600887.SS",
+      "name": "伊利股份",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.8,
+        "view": "当日信号: 强势看多 (评分 80/100)。价格 ¥26.92，上涨 3.54%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥26.92, 1手¥2692。乳业绝对龙头，品牌+渠道壁垒深厚，股息率3%+消费防御"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "BUY",
+        "confidence": 0.8
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "002027.SZ",
+      "name": "分众传媒",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.8,
+        "view": "当日信号: 强势看多 (评分 80/100)。价格 ¥5.58，上涨 3.14%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥5.58, 1手¥558。梯媒绝对龙头，经济复苏广告需求弹性大，股息率4%+"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "BUY",
+        "confidence": 0.8
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "600030.SS",
+      "name": "中信证券",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.63,
+        "view": "当日信号: 偏多 (评分 63/100)。价格 ¥26.05，上涨 2.76%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥26.05, 1手¥2605。券商龙头，牛市高弹性，PB历史低位，成交活跃时爆发力强"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "BUY",
+        "confidence": 0.63
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "600585.SS",
+      "name": "海螺水泥",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.73,
+        "view": "当日信号: 强势看多 (评分 73/100)。价格 ¥20.15，上涨 2.44%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥20.15, 1手¥2015。水泥龙头成本优势突出，高分红+低估值，基建稳增长受益"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "BUY",
+        "confidence": 0.73
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "600036.SS",
+      "name": "招商银行",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.73,
+        "view": "当日信号: 强势看多 (评分 73/100)。价格 ¥38.01，上涨 2.40%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥38.01, 1手¥3801。零售银行之王，ROE行业最高，股息率5%+，防御配置首选"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "BUY",
+        "confidence": 0.73
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "600438.SS",
+      "name": "通威股份",
+      "technical": {
+        "overallSignal": "bearish",
+        "signalStrength": 0.27,
+        "view": "当日信号: 弱势回避 (评分 27/100)。价格 ¥14.77，下跌 -2.38%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥14.77, 1手¥1477。硅料+电池双龙头，成本行业最低，行业出清后集中度提升受益最大"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "WATCH",
+        "confidence": 0.27
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "600900.SS",
+      "name": "长江电力",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.73,
+        "view": "当日信号: 强势看多 (评分 73/100)。价格 ¥27.75，上涨 1.95%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥27.75, 1手¥2775。水电龙头现金流稳定，股息率3.5%+，类债券防御资产"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "BUY",
+        "confidence": 0.73
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "300015.SZ",
+      "name": "爱尔眼科",
+      "technical": {
+        "overallSignal": "bearish",
+        "signalStrength": 0.27,
+        "view": "当日信号: 弱势回避 (评分 27/100)。价格 ¥9.12，下跌 -1.19%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥9.12, 1手¥912。眼科连锁龙头，老龄化+近视率双驱动，模式可复制性极强"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "WATCH",
+        "confidence": 0.27
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "601899.SS",
+      "name": "紫金矿业",
+      "technical": {
+        "overallSignal": "bearish",
+        "signalStrength": 0.35,
+        "view": "当日信号: 偏弱关注 (评分 35/100)。价格 ¥30.44，下跌 -0.88%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥30.44, 1手¥3044。全球铜金矿巨头，新能源金属+央行购金双驱动，海外产能释放"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "WATCH",
+        "confidence": 0.35
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    },
+    {
+      "ticker": "600031.SS",
+      "name": "三一重工",
+      "technical": {
+        "overallSignal": "neutral",
+        "signalStrength": 0.55,
+        "view": "当日信号: 震荡观望 (评分 55/100)。价格 ¥17.94，上涨 0.22%。"
+      },
+      "fundamental": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5,
+        "view": "¥17.94, 1手¥1794。海外收入60%+，设备更新周期+基建回暖，周期底部布局"
+      },
+      "insider": {
+        "overallSignal": "insufficient_data",
+        "signalStrength": 0.5
+      },
+      "recommendation": {
+        "signal": "HOLD",
+        "confidence": 0.55
+      },
+      "risks": [
+        "市场系统性风险",
+        "个股波动风险"
+      ]
+    }
+  ]
+}
