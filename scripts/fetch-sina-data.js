@@ -317,6 +317,46 @@ async function main() {
   );
   console.log(`✅ 分析数据已保存`);
 
+  // 扩展行情：获取股票库中所有股票的实时价格
+  const stockListPath = path.join(DATA_DIR, 'stock_list.json');
+  if (fs.existsSync(stockListPath)) {
+    try {
+      const stockList = JSON.parse(fs.readFileSync(stockListPath, 'utf8'));
+      const allCodes = stockList.map(s => s.c);
+      const batchSize = 80;
+      const extQuotes = [];
+
+      console.log(`\n📡 获取股票库行情 (${allCodes.length}只，每批${batchSize})...`);
+      for (let i = 0; i < allCodes.length; i += batchSize) {
+        const batch = allCodes.slice(i, i + batchSize);
+        const batchQuotes = await getQuotes(batch);
+        for (const q of batchQuotes) {
+          if (q.price > 0) {
+            extQuotes.push({
+              t: q.ticker,
+              p: q.price,
+              c: q.changePercent,
+              v: q.volume
+            });
+          }
+        }
+        process.stdout.write(`  ${Math.min(i+batchSize, allCodes.length)}/${allCodes.length} (${extQuotes.length}有效)\r`);
+      }
+      console.log(`\n✅ 扩展行情: ${extQuotes.length}/${allCodes.length} 只在线`);
+
+      const extData = {
+        timestamp: new Date().toISOString(),
+        source: '新浪财经',
+        count: extQuotes.length,
+        quotes: extQuotes
+      };
+      fs.writeFileSync(path.join(DATA_DIR, 'quotes_ext.json'), JSON.stringify(extData), 'utf8');
+      console.log(`✅ 扩展行情已保存 (${(JSON.stringify(extData).length/1024).toFixed(1)} KB)`);
+    } catch (e) {
+      console.error('⚠️ 扩展行情获取失败:', e.message);
+    }
+  }
+
   // 打印摘要
   console.log('\n📊 行情摘要:');
   console.log('─'.repeat(50));

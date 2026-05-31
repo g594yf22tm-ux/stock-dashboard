@@ -887,14 +887,15 @@ function clientSearch(q) {
     }
   }
 
-  // 2. 再搜索全量股票库
+  // 2. 再搜索全量股票库（含扩展行情）
   for (const s of STOCK_DB) {
     if (seen.has(s.c) || results.length >= 15) break;
     const matchCode = s.c.toLowerCase().includes(ql) || s.c.replace('.SS','').replace('.SZ','').includes(ql);
     const matchName = (s.n||'').includes(q) || (s.n||'').toLowerCase().includes(ql);
     if (matchCode || matchName) {
       seen.add(s.c);
-      results.push({ ticker:s.c, name:s.n, price:null, changePercent:null, sector:'', exchange:s.c.endsWith('.SS')?'沪市':'深市', source:'股票库' });
+      const qq = _extQuotes[s.c]; // 扩展行情
+      results.push({ ticker:s.c, name:s.n, price:qq?qq.p:null, changePercent:qq?qq.c:null, sector:'', exchange:s.c.endsWith('.SS')?'沪市':'深市', source:qq?'实时行情':'股票库' });
     }
   }
   return results.slice(0, 12);
@@ -1082,6 +1083,13 @@ function drawDayChart(stock) {
 // CDN模式股票详情 (从缓存数据构建)
 function showStockDetailCDN(s) {
   const panel = document.getElementById('detailPanel');
+  // 尝试从扩展行情获取实时数据
+  const ext = _extQuotes[s.ticker];
+  if (ext && ext.p) {
+    s.price = ext.p;
+    s.changePercent = ext.c;
+    s.volume = ext.v;
+  }
   const hasData = s.price != null && s.price > 0;
   const up = (+s.changePercent||0) >= 0;
 
@@ -1303,10 +1311,23 @@ function updateClock() {
 }
 
 // ── 主刷新 ───────────────────────────────────────────────────────────────
+let _extQuotes = {}; // 扩展行情缓存
+
 async function refreshAll() {
   const btn = document.getElementById('refreshBtn');
   btn.textContent = '⏳ ...';
   btn.disabled = true;
+
+  // CDN模式: 加载扩展行情数据
+  if (isRemote) {
+    fetchCDN('quotes_ext.json').then(data => {
+      if (data && data.quotes) {
+        _extQuotes = {};
+        data.quotes.forEach(q => { _extQuotes[q.t] = q; });
+        console.log('扩展行情加载:', Object.keys(_extQuotes).length, '只');
+      }
+    }).catch(() => {});
+  }
 
   const start = Date.now();
   // 使用 allSettled 避免单个API失败导致全部卡住
