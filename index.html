@@ -818,18 +818,20 @@ async function doSearch(q) {
       return;
     }
     box.innerHTML = results.map((r, i) => `
-      <div class="result-item" data-index="${i}" onclick="selectAndView('${r.ticker}')">
-        <div class="stock-info">
-          <span class="stock-name">${r.name} · ${r.ticker}</span>
-          <span class="stock-code">${r.sector||''} · CDN模式 · ${r.price?'¥'+r.price:'—'}</span>
+      <div class="result-item" data-index="${i}" onclick="selectAndView('${r.ticker}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:0.9em">${r.name} <span style="color:var(--muted);font-size:0.75em;font-weight:400">${r.ticker}</span></div>
+          <div style="font-size:0.72em;color:var(--muted);margin-top:2px">
+            ${r.sector?r.sector+' · ':''}${r.source||''} · ${r.exchange||''}
+            ${r.price ? ' · <b style=color:'+(r.changePercent>=0?'var(--up)':'var(--down)')+'>¥'+r.price.toFixed(2)+'</b>' : ' · ⚡无行情'}
+          </div>
         </div>
-        <div class="stock-price">
-          <div class="p">${r.price ? '¥'+F.price(r.price) : '—'}</div>
-          <div class="c ${F.dir(r.changePercent)}">${F.pct(r.changePercent)}</div>
-          <button class="btn" style="font-size:0.7em;padding:3px 6px" onclick="event.stopPropagation();addFav('${r.ticker}','${r.name}')">⭐自选</button>
+        <div style="text-align:right;white-space:nowrap">
+          ${r.price ? '<div style="font-weight:700;font-size:1em;color:'+(r.changePercent>=0?'var(--up)':'var(--down)')+'">'+(r.changePercent>=0?'+':'')+r.changePercent.toFixed(2)+'%</div>' : '<div style="color:var(--muted);font-size:0.78em">—</div>'}
+          <button class="btn" style="font-size:0.7em;padding:2px 8px;margin-top:4px" onclick="event.stopPropagation();addFav('${r.ticker}','')">⭐自选</button>
         </div>
       </div>`).join('');
-    box.innerHTML += '<div class="search-tip">📡 CDN模式 · 搜索'+results.length+'条 (关注列表有行情数据)</div>';
+    box.innerHTML += '<div class="search-tip">📡 CDN模式 · 关注列表有实时行情 · 其他股票可看基本信息和新闻链接</div>';
     return;
   }
 
@@ -919,9 +921,16 @@ async function showStockDetail(ticker) {
 
   // CDN模式：从本地缓存构建详情
   if (isRemote) {
-    const s = (_watchlistData||[]).find(d=>d.ticker===ticker);
+    let s = (_watchlistData||[]).find(d=>d.ticker===ticker);
     if (!s) {
-      panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">未找到股票</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">CDN模式下仅支持关注列表中的股票详情</div>';
+      // 从股票库查找基本信息
+      const db = STOCK_DB.find(x=>x.c===ticker);
+      if (db) {
+        s = { ticker: db.c, name: db.n, price: null, changePercent: null, sector: '', open: null, high: null, low: null, volume: null, amount: null };
+      }
+    }
+    if (!s) {
+      panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">未找到</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">该代码不在股票库中</div>';
       return;
     }
     showStockDetailCDN(s);
@@ -1144,6 +1153,13 @@ function closeDetail() {
 // ── 自选股 ──────────────────────────────────────────────────────────────
 async function addFav(ticker, name) {
   if (isRemote) {
+    // 查找名称（如果未传入）
+    if (!name) {
+      const wl = (_watchlistData||[]).find(s=>s.ticker===ticker);
+      if (wl) name = wl.name;
+      else { const db = STOCK_DB.find(s=>s.c===ticker); if (db) name = db.n; }
+      if (!name) name = ticker;
+    }
     let favs = JSON.parse(localStorage.getItem('stock_favs_v2')||'[]');
     if (!favs.find(f=>f.ticker===ticker)) {
       favs.push({ticker, name, addedAt: new Date().toISOString()});
