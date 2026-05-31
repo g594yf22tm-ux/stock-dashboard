@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>📊 A股仪表盘 — 24/7 实时行情</title>
 <style>
@@ -258,10 +259,6 @@ tr:hover { background:rgba(255,255,255,0.02); }
 
 <script>
 // ==================== CONFIG ====================
-// JSONP 方式直接调用新浪 API — 无需 CORS 代理，不会乱码！
-const SINA_QUOTE = 'https://hq.sinajs.cn/list=';
-const SINA_SEARCH = 'https://suggest3.sinajs.cn/suggest/type=11,12,13,14&key=';
-
 const WATCHLIST = [
   { tk:'002027.SZ', nm:'分众传媒', sc:'📺 传媒·广告' },
   { tk:'300015.SZ', nm:'爱尔眼科', sc:'🏥 医药·眼科' },
@@ -342,111 +339,70 @@ function getRefreshInterval() {
   return 60000; // 1 min during trading
 }
 
-// ==================== JSONP 数据获取（直接调新浪API，无CORS代理，无乱码）====================
-// 新浪API返回GBK编码的JS变量，script标签自动按浏览器编码解析
+// ==================== 数据获取 ====================
+// 策略：同源时使用Express API（服务器端正确设置Referer），跨域时使用JSONP
 
-function jsonpFetch(url, timeoutMs=8000) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    const timer = setTimeout(() => { script.remove(); reject(new Error('timeout')); }, timeoutMs);
-    script.src = url;
-    script.onload = () => { clearTimeout(timer); script.remove(); resolve(); };
-    script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error('network')); };
-    document.head.appendChild(script);
-  });
-}
-
-// 从 window 全局变量读取新浪行情数据
-function readQuotesFromWindow(codesStr) {
-  const results = [];
-  const codeList = codesStr.split(',');
-  for (const code of codeList) {
-    const varName = 'hq_str_' + code;
-    const raw = window[varName];
-    if (!raw || typeof raw !== 'string') continue;
-    const f = raw.split(',');
-    if (f.length < 32) continue;
-    const num = code.replace(/^sh|^sz/, '');
-    const mkt = code.startsWith('sh') ? 'SS' : 'SZ';
-    const price = parseFloat(f[3]) || 0;
-    const prevClose = parseFloat(f[2]) || 0;
-    const chg = price - prevClose;
-    results.push({
-      ticker: num+'.'+mkt,
-      name: f[0],
-      open: parseFloat(f[1])||0,
-      prevClose,
-      price,
-      high: parseFloat(f[4])||0,
-      low: parseFloat(f[5])||0,
-      volume: parseInt(f[8])||0,
-      amount: parseFloat(f[9])||0, // 万元
-      change: chg,
-      changePercent: prevClose ? (chg/prevClose*100) : 0,
-      date: f[30], time: f[31]
-    });
-    // 清理全局变量
-    delete window[varName];
-  }
-  return results;
-}
+const API_BASE = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? '' : '';
 
 async function fetchQuotes(tickers) {
-  const codes = tickers.map(t => {
-    const p = t.split('.');
-    const m = p[1].toLowerCase();
-    return (m==='ss'?'sh':'sz') + p[0];
-  }).join(',');
-  try {
-    await jsonpFetch(SINA_QUOTE + codes, 10000);
-    return readQuotesFromWindow(codes);
-  } catch(e) {
-    console.error('JSONP quotes failed:', e.message);
-    return [];
-  }
-}
-
-// 搜索用 JSONP
-async function searchStocks(query) {
-  try {
-    await jsonpFetch(SINA_SEARCH + encodeURIComponent(query), 6000);
-    const raw = window['suggestvalue'];
-    delete window['suggestvalue'];
-    if (!raw || typeof raw !== 'string') return [];
-    const m = raw.match(/"([^"]+)"/);
-    if (!m || !m[1]) return [];
-    const results = [];
-    const seen = new Set();
-    const entries = m[1].split(';').filter(Boolean);
-    for (const e of entries) {
-      const p = e.split(',');
-      if (p.length < 5) continue;
-      const isCode = p[0].startsWith('sh')||p[0].startsWith('sz');
-      let name, type, code;
-      if (isCode) {
-        code = p[0]; type = p[1]; name = p[4];
-        if (!name || name.startsWith('sh')||name.startsWith('sz')) name = p[6]||p[0];
-      } else {
-        name = p[0]; type = p[1]; code = p[3];
+  // 优先使用同源 Express API（无CORS，服务器端已正确设置Referer请求头）
+  if (!API_BASE && location.port==='3000') {
+    try {
+      const r = await fetch('/api/watchlist/live');
+      if (r.ok) {
+        const data = await r.json();
+        return (data.stocks||[]).map(s => ({
+          ticker: s.ticker,
+          name: s.name,
+          open: s.open,
+          prevClose: s.price ? s.price - (s.change||0) : 0, // 反推昨收
+          price: s.price,
+          high: s.high,
+          low: s.low,
+          volume: s.volume,
+          amount: s.amount,
+          change: s.change,
+          changePercent: s.changePercent,
+          time: ''
+        }));
       }
-      if (!name||!code||!['11','12'].includes(type)) continue;
-      const mkt = code.startsWith('sh')?'SS':'SZ';
-      const tk = code.replace(/^sh|^sz/,'')+'.'+mkt;
-      if (seen.has(tk)) continue;
-      seen.add(tk);
-      results.push({ ticker:tk, name:name.trim(), exchange:type==='11'?'沪市':'深市' });
-    }
-    return results.slice(0,12);
-  } catch(e) {
-    console.error('JSONP search failed:', e.message);
-    return [];
+    } catch(e) { console.error('API fetch failed:', e.message); }
   }
+
+  // 回退：返回空，避免乱码
+  console.error('无法获取数据：需要Express服务器运行中。请访问 http://localhost:3000/');
+  return [];
 }
 
-// 新闻抓取 — 新浪个股页面不跨域，用 fetch 直接请求
+async function searchStocks(query) {
+  // 同源时使用 Express 搜索API
+  if (!API_BASE && location.port==='3000') {
+    try {
+      const r = await fetch('/api/search?q='+encodeURIComponent(query));
+      if (r.ok) {
+        const data = await r.json();
+        return (data.results||[]).map(r => ({
+          ticker: r.ticker,
+          name: r.name,
+          exchange: r.exchange||(r.ticker.endsWith('.SS')?'沪市':'深市')
+        }));
+      }
+    } catch(e) { console.error('Search API failed:', e.message); }
+  }
+  return [];
+}
+
 async function fetchNews(ticker) {
-  // 新闻页面只能通过服务器端代理获取，浏览器直接访问会被 CORS 阻止
-  // 返回空数组，详情弹窗显示「暂无新闻」
+  // 同源时使用 Express 新闻API
+  if (!API_BASE && location.port==='3000') {
+    try {
+      const r = await fetch('/api/stock/'+encodeURIComponent(ticker)+'/news');
+      if (r.ok) {
+        const data = await r.json();
+        return (data.articles||[]).map(a => ({title:a.title, url:a.url}));
+      }
+    } catch(e) {}
+  }
   return [];
 }
 
@@ -510,33 +466,77 @@ async function refreshAll() {
   const app = document.getElementById('app');
   app.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:12px">⏳ 获取实时行情...</p></div>';
 
-  const allTickers = WATCHLIST.map(s=>s.tk).concat(INDICES.map(i=>i.tk));
-  const allData = await fetchQuotes(allTickers);
+  const isLocal = location.port==='3000' && (location.hostname==='localhost'||location.hostname==='127.0.0.1');
 
-  if (!allData || allData.length===0) {
-    app.innerHTML = `<div class="error-box">
-      <p>❌ 数据加载失败</p>
-      <p style="font-size:0.82em;margin-top:8px">新浪API暂时不可用或网络异常，请稍后重试</p>
-      <button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重新加载</button>
-    </div>`;
-    updateFooter(false);
-    return;
+  if (isLocal) {
+    // 同源：直接调用 Express API
+    try {
+      const [marketResp, watchResp] = await Promise.all([
+        fetch('/api/market'),
+        fetch('/api/watchlist/live')
+      ]);
+
+      if (marketResp.ok && watchResp.ok) {
+        const marketData = await marketResp.json();
+        const watchData = await watchResp.json();
+
+        // 构建 indexData
+        const idxMap = marketData.indices || {};
+        indexData = INDICES.map(cfg => {
+          const q = idxMap[cfg.tk];
+          return {...cfg, quote: q||null};
+        });
+
+        // 构建 stockData
+        stockData = WATCHLIST.map(cfg => {
+          const s = (watchData.stocks||[]).find(d=>d.ticker===cfg.tk);
+          const q = s ? {
+            ticker: s.ticker, name: s.name, price: s.price,
+            open: s.open, prevClose: s.price - (s.change||0),
+            high: s.high, low: s.low, volume: s.volume,
+            amount: s.amount, change: s.change,
+            changePercent: s.changePercent, time: ''
+          } : null;
+          return {...cfg, quote:q, signal:q?analyzeSignal(q):null};
+        });
+
+        renderAll();
+        updateFooter(true);
+        lastRefresh = Date.now();
+        scheduleNextRefresh();
+        return;
+      }
+    } catch(e) { console.error('API error:', e.message); }
+  } else {
+    // 远程：尝试 JSONP
+    const allTickers = WATCHLIST.map(s=>s.tk).concat(INDICES.map(i=>i.tk));
+    const allData = await fetchQuotes(allTickers);
+    if (allData && allData.length>0) {
+      stockData = WATCHLIST.map(cfg => {
+        const q = allData.find(d=>d.ticker===cfg.tk);
+        return {...cfg, ...(q||{}), quote:q, signal:q?analyzeSignal(q):null};
+      });
+      indexData = INDICES.map(cfg => {
+        const q = allData.find(d=>d.ticker===cfg.tk);
+        return {...cfg, quote:q};
+      });
+      renderAll();
+      updateFooter(true);
+      lastRefresh = Date.now();
+      scheduleNextRefresh();
+      return;
+    }
   }
 
-  stockData = WATCHLIST.map(cfg => {
-    const q = allData.find(d=>d.ticker===cfg.tk);
-    return {...cfg, ...(q||{}), quote:q, signal:q?analyzeSignal(q):null};
-  });
-
-  indexData = INDICES.map(cfg => {
-    const q = allData.find(d=>d.ticker===cfg.tk);
-    return {...cfg, quote:q};
-  });
-
-  renderAll();
-  updateFooter(true);
-  lastRefresh = Date.now();
-  scheduleNextRefresh();
+  // 全部失败
+  app.innerHTML = `<div class="error-box">
+    <p>❌ 数据加载失败</p>
+    <p style="font-size:0.82em;margin-top:8px">${isLocal ? '请确保Express服务器正在运行' : '远程访问需要Express服务器配合local隧道'}</p>
+    <p style="font-size:0.75em;margin-top:4px;color:var(--muted)">💡 本地访问: <b>http://localhost:3000/standalone.html</b></p>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="refreshAll()">🔄 重新加载</button>
+    ${!isLocal ? `<a href="http://localhost:3000/standalone.html" class="btn" style="margin-top:8px;display:inline-block;text-decoration:none">🔗 转到本地版</a>` : ''}
+  </div>`;
+  updateFooter(false);
 }
 
 function renderAll() {
@@ -597,7 +597,7 @@ function renderAll() {
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <span style="font-size:0.85em;color:var(--muted)">🕐 ${ms.text}</span>
       <span style="font-size:0.78em;color:var(--muted)">|</span>
-      <span style="font-size:0.78em;color:var(--muted)">📡 新浪财经实时行情 (JSONP直连)</span>
+      <span style="font-size:0.78em;color:var(--muted)">📡 新浪财经实时行情 (本地Express代理)</span>
       <span style="font-size:0.78em;color:var(--muted)">|</span>
       <span style="font-size:0.78em;color:var(--muted)">🔄 自动刷新: ${ms.open?'60秒':'5分钟'}</span>
     </div>
