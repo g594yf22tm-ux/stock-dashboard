@@ -1003,16 +1003,22 @@ async function showStockDetail(ticker) {
 
   // CDN模式：从本地缓存构建详情
   if (isRemote) {
+    // 如果完整股票库未加载，触发加载
+    if (!_stockDBLoaded) loadStockDB();
     let s = (_watchlistData||[]).find(d=>d.ticker===ticker);
     if (!s) {
-      // 从股票库查找基本信息
-      const db = STOCK_DB.find(x=>x.c===ticker);
+      // 先从快速内嵌库查找（100只常用股，始终可用）
+      let db = STOCK_FAST.find(x=>x.c===ticker);
+      // 再从完整库查找（可能还在加载中）
+      if (!db && _stockDBLoaded) db = STOCK_DB.find(x=>x.c===ticker);
       if (db) {
-        s = { ticker: db.c, name: db.n, price: null, changePercent: null, sector: '', open: null, high: null, low: null, volume: null, amount: null };
+        // 注入扩展行情
+        const ext = _extQuotes[db.c];
+        s = { ticker: db.c, name: db.n, price: ext?ext.p:null, changePercent: ext?ext.c:null, volume: ext?ext.v:null, open: null, high: null, low: null, amount: null, sector: '' };
       }
     }
     if (!s) {
-      panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">未找到</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">该代码不在股票库中</div>';
+      panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">未找到</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">股票库加载中，请稍后再试<br><small>或访问 <b>http://localhost:3000</b> 获取完整数据</small></div>';
       return;
     }
     showStockDetailCDN(s);
