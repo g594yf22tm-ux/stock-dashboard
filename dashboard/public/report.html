@@ -159,7 +159,10 @@
 
 <div class="footer">AI 辅助生成 | 新浪财经实时行情 | 仅供参考，不构成投资建议</div>
 
+
 <script>
+const isRemote = !(location.hostname==='localhost'||location.hostname==='127.0.0.1');
+
 const p = new URLSearchParams(location.search);
 const file = p.get('file') || '';
 
@@ -187,7 +190,7 @@ async function loadReportList() {
     reportList = (data.reports || []).map(r => r.filename);
     currentIdx = reportList.indexOf(file);
     updateNavButtons();
-  } catch {}
+  } catch(e) { console.error('loadReportList:', e); }
 }
 
 function updateNavButtons() {
@@ -239,7 +242,7 @@ window.addEventListener('scroll', () => {
 
 async function load(fn) {
   try {
-    const r = await fetch('/reports/'+fn);
+    const r = await fetch((isRemote ? './reports/' : '/reports/') + fn);
     if (!r.ok) throw new Error('报告不存在');
     const md = await r.text();
     document.getElementById('reportTitle').textContent = fn.replace(/\.md$/,'').replace(/_/g,' ');
@@ -384,5 +387,22 @@ function fmt(t) {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
 }
 </script>
+
+<script>
+// CDN模式下的报告列表（与GitHub Pages同步）
+window.__CDN_REPORTS__ = [
+  {filename:'600036_招商银行_deep_dive_2026-05-31.md',title:'招商银行 deep dive',date:'2026-05-31'},
+  {filename:'600900_长江电力_deep_dive_2026-05-31.md',title:'长江电力 deep dive',date:'2026-05-31'},
+  {filename:'600887_伊利股份_deep_dive_2026-05-31.md',title:'伊利股份 deep dive',date:'2026-05-31'},
+  {filename:'601899_紫金矿业_deep_dive_2026-05-31.md',title:'紫金矿业 deep dive',date:'2026-05-31'},
+  {filename:'002027_分众传媒_deep_dive_2026-05-31.md',title:'分众传媒 deep dive',date:'2026-05-31'},
+  {filename:'600031_三一重工_deep_dive_2026-05-31.md',title:'三一重工 deep dive',date:'2026-05-31'},
+  {filename:'600585_海螺水泥_deep_dive_2026-05-31.md',title:'海螺水泥 deep dive',date:'2026-05-31'},
+  {filename:'600030_中信证券_deep_dive_2026-05-31.md',title:'中信证券 deep dive',date:'2026-05-31'},
+  {filename:'300015_爱尔眼科_deep_dive_2026-05-31.md',title:'爱尔眼科 deep dive',date:'2026-05-31'},
+  {filename:'600438_通威股份_deep_dive_2026-05-31.md',title:'通威股份 deep dive',date:'2026-05-31'}
+];
+</script>
+
 </body>
 </html>
