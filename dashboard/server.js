@@ -1221,6 +1221,25 @@ app.post('/api/favorites/remove', (req, res) => {
 });
 
 // -- Report Delete API --------------------------------------------------------
+// DELETE /api/reports/all — 一键清空所有报告
+app.delete('/api/reports/all', (req, res) => {
+  try {
+    if (!fs.existsSync(REPORTS_DIR)) {
+      return res.json({ status: 'deleted', count: 0, message: '无报告可删除' });
+    }
+    const files = fs.readdirSync(REPORTS_DIR).filter(f => f.endsWith('.md'));
+    let deleted = 0;
+    for (const f of files) {
+      try { fs.unlinkSync(path.join(REPORTS_DIR, f)); deleted++; }
+      catch(e) { console.error('[Reports] Delete error:', f, e.message); }
+    }
+    console.log('[Reports] Batch deleted:', deleted, 'files');
+    res.json({ status: 'deleted', count: deleted, message: `已删除 ${deleted} 份报告` });
+  } catch(err) {
+    res.status(500).json({ error: '批量删除失败', message: err.message });
+  }
+});
+
 // DELETE /api/reports/:filename
 app.delete('/api/reports/:filename', (req, res) => {
   const filename = decodeURIComponent(req.params.filename);
