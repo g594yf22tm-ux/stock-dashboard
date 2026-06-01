@@ -1364,6 +1364,7 @@ async function loadFavorites() {
 
 // ── 快速分析 ────────────────────────────────────────────────────────────
 async function quickAnalyze(ticker) {
+  if (isRemote) { showToast('💡 CDN模式下请在本地运行 npm run dashboard 后使用分析功能'); return; }
   showToast('📝 正在生成分析报告...');
   try {
     const resp = await fetch(API.analyze, {
@@ -1412,6 +1413,10 @@ function exportCSV() {
 
 // ── 删除报告 ────────────────────────────────────────────────────────────
 async function deleteReport(filename) {
+  if (isRemote) {
+    showToast('💡 CDN模式下报告由GitHub管理，无法在线删除');
+    return;
+  }
   try {
     const resp = await fetch('/api/reports/' + filename, { method: 'DELETE' });
     const r = await resp.json();
