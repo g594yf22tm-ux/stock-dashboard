@@ -480,6 +480,19 @@ let sortState = { col: null, asc: false };
 const isRemote = !(location.hostname==='localhost'||location.hostname==='127.0.0.1');
 const CDN = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
 
+// ── 预加载扩展行情（确保首次搜索就有实时价格）───────────────────────────
+let _extQuotes = {};
+if (isRemote) {
+  fetchCDN('quotes_ext.json').then(data => {
+    if (data && data.quotes) {
+      _extQuotes = {};
+      data.quotes.forEach(q => { _extQuotes[q.t] = q; });
+      console.log('预加载扩展行情:', Object.keys(_extQuotes).length, '只');
+      try { loadFavorites(); } catch {}
+    }
+  }).catch(() => {});
+}
+
 async function fetchCDN(file) {
   try { const r = await fetch(CDN+'/'+file, {cache:'no-cache'}); if (r.ok) return r.json(); }
   catch(e) { console.error('CDN:', e.message); }
@@ -625,7 +638,7 @@ function applySortAndRender() {
     const peColor = s.pe > 80 ? 'var(--accent)' : s.pe > 40 ? 'var(--info)' : '';
     return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
       <td><b>${s.ticker}</b>${s._live?' <span style="font-size:0.65em;color:var(--up)">●</span>':''}</td>
-      <td><span class="stock-link">${s.name||s.ticker}</span>${s.sector?` <span class="sector-tag">${s.sector}</span>`:''}</td>
+      <td><span class="stock-link">${s.name||s.ticker}</span>${(function(){let t=s.sector?` <span class="sector-tag">${s.sector}</span>`:'';if(!s.sector&&isRemote&&_watchlistData){const w=_watchlistData.find(function(x){return x.ticker===s.ticker});if(w&&w.sector)t=` <span class="sector-tag">${w.sector}</span>`;}return t;})()}</td>
       <td>¥${F.price(s.price)}</td>
       <td class="${up?'up':'down'}">${(+s.change)>0?'+':''}${F.price(s.change)}</td>
       <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
@@ -804,6 +817,32 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('.search-wrapper')) hideSearch();
 });
 
+
+function doSearchRetry(q) {
+  const box = document.getElementById('searchResults');
+  const results = clientSearch(q);
+  if (results.length) {
+    box.innerHTML = results.map((r, i) => buildSearchItemHTML(r)).join('') + '<div class="search-tip">📡 CDN模式 · 185只有实时行情 · 其余可看基本信息</div>';
+  }
+}
+function buildSearchItemHTML(r) {
+  const up = (+(r.changePercent||0)) >= 0;
+  const priceColor = r.price ? (up ? 'var(--up)' : 'var(--down)') : 'var(--muted)';
+  return '<div class="result-item" onclick="selectAndView(\''+r.ticker+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px">'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-weight:600;font-size:0.9em">'+r.name+' <span style="color:var(--muted);font-size:0.75em;font-weight:400">'+r.ticker+'</span></div>'+
+      '<div style="font-size:0.72em;color:var(--muted);margin-top:2px">'+
+        (r.sector?r.sector+' · ':'')+(r.source||'')+' · '+(r.exchange||'')+
+        (r.price ? ' · <b style=color:'+priceColor+'>¥'+r.price.toFixed(2)+'</b>' : ' · ⚡无行情')+
+      '</div>'+
+    '</div>'+
+    '<div style="text-align:right;white-space:nowrap">'+
+      (r.price ? '<div style="font-weight:700;font-size:1em;color:'+priceColor+'">'+(up?'+':'')+(r.changePercent||0).toFixed(2)+'%</div>' : '<div style="color:var(--muted);font-size:0.78em">—</div>')+
+      '<button class="btn" style="font-size:0.7em;padding:2px 8px;margin-top:4px" onclick="event.stopPropagation();addFav(\''+r.ticker+'\',\''+(r.name||'')+'\')">⭐自选</button>'+
+    '</div>'+
+  '</div>';
+}
+
 async function doSearch(q) {
   const box = document.getElementById('searchResults');
   if (q.length < 1) { hideSearch(); return; }
@@ -814,24 +853,13 @@ async function doSearch(q) {
   if (isRemote) {
     const results = clientSearch(q);
     if (!results.length) {
-      box.innerHTML = '<div class="search-no-results"><div style="font-size:1em;margin-bottom:8px">未找到"<b>'+q+'</b>"</div><div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称搜索 (远程模式仅搜索关注列表)</div></div>';
+      const dbHint = _stockDBLoaded ? '' : '<div style="font-size:0.78em;color:var(--info);margin-top:6px">⏳ 正在加载全量A股库(5207只)...请稍后再搜</div>';
+      box.innerHTML = '<div class="search-no-results"><div style="font-size:1em;margin-bottom:8px">未找到"<b>'+q+'</b>"</div><div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称 / 拼音首字母 · 5207只A股全覆盖</div>'+dbHint+'</div>';
+      if (!_stockDBLoaded) { loadStockDB().then(function(){ var qq=document.getElementById('searchInput').value.trim(); if(qq===q){ var retry=clientSearch(q); if(retry.length){ box.innerHTML=retry.map(function(r){return buildSearchItemHTML(r);}).join('')+'<div class="search-tip">📡 CDN · '+Object.keys(_extQuotes).length+'只有实时行情</div>'; } } }); }
       return;
     }
-    box.innerHTML = results.map((r, i) => `
-      <div class="result-item" data-index="${i}" onclick="selectAndView('${r.ticker}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:0.9em">${r.name} <span style="color:var(--muted);font-size:0.75em;font-weight:400">${r.ticker}</span></div>
-          <div style="font-size:0.72em;color:var(--muted);margin-top:2px">
-            ${r.sector?r.sector+' · ':''}${r.source||''} · ${r.exchange||''}
-            ${r.price ? ' · <b style=color:'+(r.changePercent>=0?'var(--up)':'var(--down)')+'>¥'+r.price.toFixed(2)+'</b>' : ' · ⚡无行情'}
-          </div>
-        </div>
-        <div style="text-align:right;white-space:nowrap">
-          ${r.price ? '<div style="font-weight:700;font-size:1em;color:'+(r.changePercent>=0?'var(--up)':'var(--down)')+'">'+(r.changePercent>=0?'+':'')+r.changePercent.toFixed(2)+'%</div>' : '<div style="color:var(--muted);font-size:0.78em">—</div>'}
-          <button class="btn" style="font-size:0.7em;padding:2px 8px;margin-top:4px" onclick="event.stopPropagation();addFav('${r.ticker}','')">⭐自选</button>
-        </div>
-      </div>`).join('');
-    box.innerHTML += '<div class="search-tip">📡 CDN模式 · 关注列表有实时行情 · 其他股票可看基本信息和新闻链接</div>';
+    box.innerHTML = results.map((r) => buildSearchItemHTML(r)).join('');
+    box.innerHTML += '<div class="search-tip">📡 CDN模式 · '+Object.keys(_extQuotes).length+'只有实时行情 · 5207只可搜基本信息</div>';
     return;
   }
 
@@ -1213,7 +1241,7 @@ function showStockDetailCDN(s) {
     </div>
     <div class="detail-grid">
       <div class="detail-metric"><div class="dm-label">开盘价</div><div class="dm-value">¥${F.price(s.open)}</div></div>
-      <div class="detail-metric"><div class="dm-label">昨收</div><div class="dm-value">¥${F.price(s.price - (s.change||0))}</div></div>
+      <div class="detail-metric"><div class="dm-label">昨收</div><div class="dm-value">¥${(function(){if(s.changePercent!=null){return F.price(s.price/(1+ +s.changePercent/100));}return F.price(s.price);})()}</div></div>
       <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up)">¥${F.price(s.high)}</div></div>
       <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down)">¥${F.price(s.low)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交量</div><div class="dm-value">${F.vol(s.volume)}</div></div>
@@ -1317,11 +1345,11 @@ async function loadFavorites() {
         <td><b>${s.ticker}</b></td>
         <td><span class="stock-link">${s.name||s.ticker}</span>${s.sector?` <span class="sector-tag">${s.sector}</span>`:''}</td>
         <td>${price ? '¥'+F.price(price) : '—'}</td>
-        <td class="${up?'up':'down'}">${F.pct(change)}</td>
+        <td class="${up?'up':'down'}">${change != null ? (change>0?'+':'')+(+change).toFixed(2) : '—'}</td>
         <td class="${up?'up':'down'}">${F.pct(changePercent)}</td>
         <td>${F.vol(volume)}</td>
         <td>${s.amount ? (s.amount/10000).toFixed(2)+'亿' : '—'}</td>
-        <td>${changePercent ? (changePercent>=0?'<span style=color:var(--up)>📈</span>':'<span style=color:var(--down)>📉</span>') : '—'}</td>
+        <td>${changePercent != null ? (+changePercent>=0?'<span style=color:var(--up)>📈</span>':'<span style=color:var(--down)>📉</span>') : '—'}</td>
         <td><button class="btn" style="font-size:0.7em;padding:2px 8px;color:var(--down)" onclick="event.stopPropagation();removeFav('${s.ticker}')">✕ 移除</button></td>
       </tr>`;
     }).join('');
@@ -1405,7 +1433,6 @@ function updateClock() {
 }
 
 // ── 主刷新 ───────────────────────────────────────────────────────────────
-let _extQuotes = {}; // 扩展行情缓存
 
 async function refreshAll() {
   const btn = document.getElementById('refreshBtn');
