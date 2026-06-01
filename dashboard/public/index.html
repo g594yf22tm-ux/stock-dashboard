@@ -1299,16 +1299,23 @@ async function loadFavorites() {
       return;
     }
     tbody.innerHTML = data.favorites.map(s => {
-      const up = +(s.changePercent || 0) >= 0;
+      // CDN模式: 从扩展行情/关注列表注入实时价格
+      let price = s.price, change = s.change, changePercent = s.changePercent, volume = s.volume;
+      if (isRemote) {
+        const wl = (_watchlistData||[]).find(x=>x.ticker===s.ticker);
+        if (wl && wl.price) { price = wl.price; change = wl.change; changePercent = wl.changePercent; volume = wl.volume; }
+        else if (_extQuotes[s.ticker]) { const q=_extQuotes[s.ticker]; price = q.p; changePercent = q.c; volume = q.v; change = q.p ? (q.p * q.c / 100) : null; }
+      }
+      const up = +(changePercent || 0) >= 0;
       return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
         <td><b>${s.ticker}</b></td>
         <td><span class="stock-link">${s.name||s.ticker}</span>${s.sector?` <span class="sector-tag">${s.sector}</span>`:''}</td>
-        <td>¥${F.price(s.price)}</td>
-        <td class="${up?'up':'down'}">${F.pct(s.change)}</td>
-        <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
-        <td>${F.vol(s.volume)}</td>
+        <td>${price ? '¥'+F.price(price) : '—'}</td>
+        <td class="${up?'up':'down'}">${F.pct(change)}</td>
+        <td class="${up?'up':'down'}">${F.pct(changePercent)}</td>
+        <td>${F.vol(volume)}</td>
         <td>${s.amount ? (s.amount/10000).toFixed(2)+'亿' : '—'}</td>
-        <td>${s.signal ? '<span style="color:'+s.signal.color+'">'+s.signal.text+' '+s.signal.score+'分</span>' : '—'}</td>
+        <td>${changePercent ? (changePercent>=0?'<span style=color:var(--up)>📈</span>':'<span style=color:var(--down)>📉</span>') : '—'}</td>
         <td><button class="btn" style="font-size:0.7em;padding:2px 8px;color:var(--down)" onclick="event.stopPropagation();removeFav('${s.ticker}')">✕ 移除</button></td>
       </tr>`;
     }).join('');
@@ -1406,6 +1413,8 @@ async function refreshAll() {
         _extQuotes = {};
         data.quotes.forEach(q => { _extQuotes[q.t] = q; });
         console.log('扩展行情加载:', Object.keys(_extQuotes).length, '只');
+        // 更新自选显示（注入实时价格）
+        try { loadFavorites(); } catch {}
       }
     }).catch(() => {});
   }
