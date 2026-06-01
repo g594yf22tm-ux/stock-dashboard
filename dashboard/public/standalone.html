@@ -342,7 +342,12 @@ function getRefreshInterval() {
 // ==================== 数据获取 ====================
 // 三层数据源: ① Express API (本地) ② jsDelivr CDN (远程, GitHub Actions推送) ③ 离线缓存
 
-const isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const isLocal = (function(){
+  const h = location.hostname;
+  if (h==='localhost'||h==='127.0.0.1'||h==='[::1]') return true;
+  if (h.startsWith('192.168.')||h.startsWith('10.')||h.startsWith('172.')) return true;
+  return false;
+})();
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
 
 // CDN 数据获取（jsDelivr 全球CDN，中国可访问，GitHub Actions每10分钟更新）
@@ -481,10 +486,7 @@ async function refreshAll() {
   const app = document.getElementById('app');
   app.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:12px">⏳ 获取实时行情...</p></div>';
 
-  const isLocal = location.port==='3000' && (location.hostname==='localhost'||location.hostname==='127.0.0.1');
-
   if (isLocal) {
-    // 同源：直接调用 Express API
     try {
       const [marketResp, watchResp] = await Promise.all([
         fetch('/api/market'),
@@ -602,7 +604,7 @@ function renderAll() {
     const pct = q.changePercent||0;
     return `<div class="idx-card">
       <div class="idx-name">${i.nm}</div>
-      <div class="idx-price">${fmtNum(q.price)}</div>
+      <div class="idx-price">¥${fmtNum(q.price)}</div>
       <div class="idx-chg ${chg>=0?'up':'down'}">
         ${chg>=0?'+':''}${fmtNum(chg)} (${chg>=0?'+':''}${fmtNum(pct)}%)
       </div>
@@ -620,7 +622,7 @@ function renderAll() {
     return `<tr>
       <td><b>${s.tk}</b></td>
       <td>${s.nm} <span class="sector-tag">${s.sc||''}</span></td>
-      <td>${q?q.price.toFixed(2):'--'}</td>
+      <td>${q?'¥'+q.price.toFixed(2):'—'}</td>
       <td class="${chg>=0?'up':'down'}">${chg>=0?'+':''}${fmtNum(chg)}</td>
       <td class="${chg>=0?'up':'down'}">${chg>=0?'+':''}${fmtNum(pct)}%</td>
       <td>${q?fmtVol(q.volume):'--'}</td>
