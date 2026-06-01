@@ -1242,7 +1242,9 @@ app.delete('/api/reports/all', (req, res) => {
 
 // DELETE /api/reports/:filename
 app.delete('/api/reports/:filename', (req, res) => {
-  const filename = decodeURIComponent(req.params.filename);
+  let filename;
+  try { filename = decodeURIComponent(req.params.filename); }
+  catch(e) { return res.status(400).json({ error: '文件名编码无效', message: e.message }); }
   const filePath = path.join(REPORTS_DIR, filename);
 
   // 安全检查：防止路径遍历
@@ -1303,7 +1305,7 @@ app.post('/api/analyze', async (req, res) => {
 | 最新价 | **¥${stock.price}** | 涨跌幅 | **${stock.changePercent}%** |
 | 开盘价 | ¥${stock.open || '—'} | 昨收 | ¥${stock.prevClose || '—'} |
 | 最高价 | ¥${stock.high || '—'} | 最低价 | ¥${stock.low || '—'} |
-| 成交量 | ${(stock.volume||0).toLocaleString()} 股 | 成交额 | ${((stock.amount||0)/10000/10000).toFixed(2)} 亿 |
+| 成交量 | ${(stock.volume||0).toLocaleString()} 手 | 成交额 | ${((stock.amount||0)/10000).toFixed(2)} 亿 |
 
 ---
 

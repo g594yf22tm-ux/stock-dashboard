@@ -477,7 +477,12 @@ const EMBEDDED_REPORTS = [{filename:'600036_招商银行_deep_dive_2026-05-31.md
 
 // ── 排序状态 ─────────────────────────────────────────────────────────────
 let sortState = { col: null, asc: false };
-const isRemote = !(location.hostname==='localhost'||location.hostname==='127.0.0.1');
+const isRemote = (function(){
+  const host = location.hostname;
+  if (host==='localhost'||host==='127.0.0.1'||host==='[::1]') return false;
+  if (host.startsWith('192.168.')||host.startsWith('10.')||host.startsWith('172.')) return false;
+  return true;
+})();
 const CDN = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
 
 // ── 预加载扩展行情（确保首次搜索就有实时价格）───────────────────────────
@@ -527,6 +532,10 @@ async function get(url) {
 }
 
 // ── 工具函数 ────────────────────────────────────────────────────────────
+
+// HTML转义 — 防止XSS
+function escHTML(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
 const F = {
   price(v) { if (v==null) return '—'; const n = +v; return n >= 1000 ? n.toFixed(2) : n.toFixed(2); },
   pct(v) { if (v==null) return '—'; const n = +v; return (n>0?'+':'') + n.toFixed(2) + '%'; },
@@ -1028,8 +1037,8 @@ async function showStockDetail(ticker) {
 
   // CDN模式：从本地缓存构建详情
   if (isRemote) {
-    // 如果完整股票库未加载，触发加载
-    if (!_stockDBLoaded) loadStockDB();
+    // 如果完整股票库未加载，等待加载完成
+    if (!_stockDBLoaded) await loadStockDB();
     let s = (_watchlistData||[]).find(d=>d.ticker===ticker);
     if (!s) {
       // 先从快速内嵌库查找（100只常用股，始终可用）
@@ -1413,6 +1422,9 @@ async function deleteAllReports() {
   showToast('🗑️ 正在批量删除...');
   try {
     const resp = await fetch('/api/reports/all', { method: 'DELETE' });
+    const ct = (resp.headers.get('content-type')||'');
+    if (ct.includes('text/html')) { showToast('💡 当前为静态托管模式，请在本地服务器(http://你电脑IP:3000)上操作'); return; }
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
     const r = await resp.json();
     if (r.status === 'deleted') {
       showToast('✅ 已删除 ' + r.count + ' 份报告');
@@ -1425,7 +1437,10 @@ async function deleteAllReports() {
 async function deleteReport(filename) {
   
   try {
-    const resp = await fetch('/api/reports/' + filename, { method: 'DELETE' });
+    const resp = await fetch('/api/reports/' + encodeURIComponent(filename), { method: 'DELETE' });
+    const ct = (resp.headers.get('content-type')||'');
+    if (ct.includes('text/html')) { showToast('💡 请在本地服务器上操作删除'); return; }
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
     const r = await resp.json();
     if (r.status === 'deleted') {
       showToast('🗑️ ' + r.message);
