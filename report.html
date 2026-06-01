@@ -161,7 +161,12 @@
 
 
 <script>
-const isRemote = !(location.hostname==='localhost'||location.hostname==='127.0.0.1');
+const isRemote = (function(){
+  const host = location.hostname;
+  if (host==='localhost'||host==='127.0.0.1'||host==='[::1]') return false;
+  if (host.startsWith('192.168.')||host.startsWith('10.')||host.startsWith('172.')) return false;
+  return true;
+})();
 
 const p = new URLSearchParams(location.search);
 const file = p.get('file') || '';
@@ -242,7 +247,7 @@ window.addEventListener('scroll', () => {
 
 async function load(fn) {
   try {
-    const r = await fetch((isRemote ? './reports/' : '/reports/') + fn);
+    const r = await fetch(isRemote ? 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/public/reports/' + fn : '/reports/' + fn);
     if (!r.ok) throw new Error('报告不存在');
     const md = await r.text();
     document.getElementById('reportTitle').textContent = fn.replace(/\.md$/,'').replace(/_/g,' ');
