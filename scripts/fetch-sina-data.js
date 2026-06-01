@@ -363,7 +363,8 @@ async function main() {
               t: q.ticker,
               p: q.price,
               c: q.changePercent,
-              v: q.volume
+              v: q.volume,
+              a: q.amount  // 成交额(万元)
             });
           }
         }

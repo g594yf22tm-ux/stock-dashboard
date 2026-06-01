@@ -1334,12 +1334,18 @@ async function loadFavorites() {
     }
     tbody.innerHTML = data.favorites.map(s => {
       // CDN模式: 从扩展行情/关注列表注入实时价格
-      let price = s.price, change = s.change, changePercent = s.changePercent, volume = s.volume;
+      let price = s.price, change = s.change, changePercent = s.changePercent, volume = s.volume, amount = s.amount;
       if (isRemote) {
         const wl = (_watchlistData||[]).find(x=>x.ticker===s.ticker);
-        if (wl && wl.price) { price = wl.price; change = wl.change; changePercent = wl.changePercent; volume = wl.volume; }
-        else if (_extQuotes[s.ticker]) { const q=_extQuotes[s.ticker]; price = q.p; changePercent = q.c; volume = q.v; change = q.p ? (q.p * q.c / 100) : null; }
+        if (wl && wl.price) { price = wl.price; change = wl.change; changePercent = wl.changePercent; volume = wl.volume; amount = wl.amount; }
+        else if (_extQuotes[s.ticker]) { const q=_extQuotes[s.ticker]; price = q.p; changePercent = q.c; volume = q.v; amount = q.a; change = q.p ? (q.p * q.c / 100) : null; }
       }
+      const cp2 = +(changePercent || 0);
+      let sigScore2 = 50, sigText2 = '震荡观望', sigColor2 = 'var(--accent)', sigBg2 = 'rgba(245,158,11,0.12)', sigBdr2 = 'rgba(245,158,11,0.3)';
+      if (cp2 >= 3) { sigScore2 = 80; sigText2 = '强势看多'; sigColor2 = 'var(--up)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
+      else if (cp2 >= 1) { sigScore2 = 65; sigText2 = '偏多'; sigColor2 = 'var(--up)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
+      else if (cp2 <= -3) { sigScore2 = 20; sigText2 = '弱势回避'; sigColor2 = 'var(--down)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
+      else if (cp2 <= -1) { sigScore2 = 35; sigText2 = '偏弱关注'; sigColor2 = 'var(--down)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
       const up = +(changePercent || 0) >= 0;
       return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
         <td><b>${s.ticker}</b></td>
@@ -1348,8 +1354,8 @@ async function loadFavorites() {
         <td class="${up?'up':'down'}">${change != null ? (change>0?'+':'')+(+change).toFixed(2) : '—'}</td>
         <td class="${up?'up':'down'}">${F.pct(changePercent)}</td>
         <td>${F.vol(volume)}</td>
-        <td>${s.amount ? (s.amount/10000).toFixed(2)+'亿' : '—'}</td>
-        <td>${changePercent != null ? (+changePercent>=0?'<span style=color:var(--up)>📈</span>':'<span style=color:var(--down)>📉</span>') : '—'}</td>
+        <td>${amount ? (amount/10000).toFixed(2)+'亿' : '—'}</td>
+        <td>${changePercent!=null?'<span class="badge" style="font-size:0.78em;background:'+sigBg2+';color:'+sigColor2+';border:1px solid '+sigBdr2+'">'+sigText2+' · '+sigScore2+'分</span>':'—'}</td>
         <td><button class="btn" style="font-size:0.7em;padding:2px 8px;color:var(--down)" onclick="event.stopPropagation();removeFav('${s.ticker}')">✕ 移除</button></td>
       </tr>`;
     }).join('');
