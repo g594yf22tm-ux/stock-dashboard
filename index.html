@@ -243,6 +243,38 @@
     .no-data { padding: 24px; text-align: center; color: var(--muted); font-size: 0.9em; }
     .no-data small { font-size: 0.85em; }
 
+    /* 报告列表 — 卡片式优化 */
+    .report-toolbar {
+      display:flex;align-items:center;justify-content:space-between;
+      padding:8px 14px;margin-bottom:8px;gap:10px;flex-wrap:wrap;
+      background:var(--surface2);border-radius:10px;font-size:0.82em;
+    }
+    .report-row {
+      display:flex;align-items:center;gap:10px;padding:9px 14px;
+      border-left:3px solid transparent;border-radius:0 8px 8px 0;
+      margin-bottom:2px;background:var(--surface);transition:all 0.25s;
+    }
+    .report-row:hover { background:var(--surface2);border-left-color:var(--primary); }
+    .report-row.deleting { opacity:0;transform:translateX(20px);pointer-events:none;max-height:0;overflow:hidden;margin:0;padding:0 14px; }
+    .report-check { width:15px;height:15px;cursor:pointer;accent-color:var(--primary);flex-shrink:0; }
+    .report-select-all { font-size:0.8em;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap;display:flex;align-items:center;gap:5px; }
+    .report-select-all:hover { color:var(--primary); }
+    .report-link { color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px;flex:1;min-width:0; }
+    .report-link:hover .report-name { color:var(--primary);text-decoration:underline; }
+    .report-name { font-weight:600;transition:color 0.15s; }
+    .report-icon { font-size:1.1em;flex-shrink:0; }
+    .report-info { display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline; }
+    .report-del {
+      background:none;border:1px solid transparent;color:var(--muted);cursor:pointer;
+      font-size:0.9em;padding:3px 8px;border-radius:6px;transition:all 0.2s;flex-shrink:0;
+      opacity:0.35;
+    }
+    .report-row:hover .report-del { opacity:1; }
+    .report-del:hover { color:#fff;background:rgba(220,38,38,0.75);border-color:rgba(220,38,38,0.5); }
+    .report-del-all { font-size:0.72em;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;white-space:nowrap; }
+    .report-del-all:hover { border-color:rgba(220,38,38,0.5);color:#ef4444;background:rgba(220,38,38,0.08); }
+    .report-count { font-size:0.75em;color:var(--muted); }
+
     /* 底部 */
     .footer {
       text-align: center; padding: 20px; color: var(--muted);
@@ -436,7 +468,7 @@
 
   <!-- 最近报告 -->
   <div class="card">
-    <div class="card-title">📄 最近分析报告</div>
+    <div class="card-title">📄 最近分析报告 </div>
     <div class="report-list" id="reportsList"><div class="loading">加载中...</div></div>
   </div>
 
@@ -477,8 +509,26 @@ const EMBEDDED_REPORTS = [{filename:'600036_招商银行_deep_dive_2026-05-31.md
 
 // ── 排序状态 ─────────────────────────────────────────────────────────────
 let sortState = { col: null, asc: false };
-const isRemote = !(location.hostname==='localhost'||location.hostname==='127.0.0.1');
+const isRemote = (function(){
+  const host = location.hostname;
+  if (host==='localhost'||host==='127.0.0.1'||host==='[::1]') return false;
+  if (host.startsWith('192.168.')||host.startsWith('10.')||host.startsWith('172.')) return false;
+  return true;
+})();
 const CDN = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
+
+// ── 预加载扩展行情（确保首次搜索就有实时价格）───────────────────────────
+let _extQuotes = {};
+if (isRemote) {
+  fetchCDN('quotes_ext.json').then(data => {
+    if (data && data.quotes) {
+      _extQuotes = {};
+      data.quotes.forEach(q => { _extQuotes[q.t] = q; });
+      console.log('预加载扩展行情:', Object.keys(_extQuotes).length, '只');
+      try { loadFavorites(); } catch {}
+    }
+  }).catch(() => {});
+}
 
 async function fetchCDN(file) {
   try { const r = await fetch(CDN+'/'+file, {cache:'no-cache'}); if (r.ok) return r.json(); }
@@ -514,6 +564,10 @@ async function get(url) {
 }
 
 // ── 工具函数 ────────────────────────────────────────────────────────────
+
+// HTML转义 — 防止XSS
+function escHTML(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
 const F = {
   price(v) { if (v==null) return '—'; const n = +v; return n >= 1000 ? n.toFixed(2) : n.toFixed(2); },
   pct(v) { if (v==null) return '—'; const n = +v; return (n>0?'+':'') + n.toFixed(2) + '%'; },
@@ -625,7 +679,7 @@ function applySortAndRender() {
     const peColor = s.pe > 80 ? 'var(--accent)' : s.pe > 40 ? 'var(--info)' : '';
     return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
       <td><b>${s.ticker}</b>${s._live?' <span style="font-size:0.65em;color:var(--up)">●</span>':''}</td>
-      <td><span class="stock-link">${s.name||s.ticker}</span>${s.sector?` <span class="sector-tag">${s.sector}</span>`:''}</td>
+      <td><span class="stock-link">${s.name||s.ticker}</span>${(function(){let t=s.sector?` <span class="sector-tag">${s.sector}</span>`:'';if(!s.sector&&isRemote&&_watchlistData){const w=_watchlistData.find(function(x){return x.ticker===s.ticker});if(w&&w.sector)t=` <span class="sector-tag">${w.sector}</span>`;}return t;})()}</td>
       <td>¥${F.price(s.price)}</td>
       <td class="${up?'up':'down'}">${(+s.change)>0?'+':''}${F.price(s.change)}</td>
       <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
@@ -700,217 +754,50 @@ function renderAnalysis(recommendations) {
 
 function renderReports(reports) {
   const el = document.getElementById('reportsList');
-  if (!reports?.length) {
+  // CDN模式：过滤已隐藏的报告
+  const visible = _filterHidden(reports || []);
+  const hiddenCount = (reports||[]).length - visible.length;
+
+  if (!visible.length) {
     el.innerHTML = `<div class="no-data">
       📝 暂无分析报告<br><br>
       <small>三种生成方式：<br>
       1️⃣ 搜索股票 → 点 <b>📝分析</b><br>
       2️⃣ 股票详情 → 点 <b>📝 一键分析</b><br>
       3️⃣ 对话输入「深度分析 招商银行」</small>
+      ${hiddenCount > 0 ? '<br><br><button class=\"btn\" onclick=\"_unhideAllReports();refreshAll();\" style=\"font-size:0.8em\">🔄 恢复 '+hiddenCount+' 份已隐藏报告</button>' : ''}
     </div>`;
     return;
   }
-  el.innerHTML = reports.map(r => {
+  // 工具栏
+  const delTools = isRemote
+    ? '<div style="display:flex;gap:6px"><button class="report-del-all" onclick="deleteSelectedReports()">🗑️ 删除选中</button><button class="report-del-all" onclick="deleteAllReports()">🗑️ 全部隐藏</button>' + (hiddenCount>0 ? '<button class="report-del-all" onclick="_unhideAllReports();refreshAll()" style="color:var(--primary);border-color:var(--primary)">🔄 恢复('+hiddenCount+')</button>' : '') + '</div>'
+    : '<div style="display:flex;gap:6px"><button class="report-del-all" onclick="deleteSelectedReports()">🗑️ 删除选中</button><button class="report-del-all" onclick="deleteAllReports()">🗑️ 一键清空</button></div>';
+  let toolbar = '<div class="report-toolbar">' +
+    '<label class="report-select-all"><input type="checkbox" class="report-check" onclick="toggleSelectAllReports(this)" title="全选/取消"> 全选</label>' +
+    '<span class="report-count">📄 '+visible.length+' 份报告' + (hiddenCount>0?' <span style="color:var(--accent)">('+hiddenCount+'已隐藏)</span>':'') + '</span>' +
+    delTools +
+    '</div>';
+
+  el.innerHTML = toolbar + reports.map(r => {
     const parts = r.filename.replace('.md','').split('_');
-    const stockName = parts[0] || '';
+    const stockName = parts[0] || '—';
     const stockCode = parts[1] || '';
-    const reportType = parts[2] || '分析';
+    let rawType = parts[2] || '分析';
+    let typeLabel = rawType.includes('deep') ? '📊 深度研报' : rawType.includes('分析') ? '📝 快速分析' : '📄 ' + rawType;
     return `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank"
-         style="color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px" title="点击查看">
-        <span style="font-size:1.2em">📄</span>
-        <div>
-          <span style="font-weight:600">${stockName}</span>
-          <span style="color:var(--muted);font-size:0.85em;margin-left:4px">${stockCode}</span>
-          <span style="color:var(--muted);font-size:0.75em;margin-left:12px">${reportType} · ${r.date}</span>
-        </div>
+    <div class="report-row" data-file="${encodeURIComponent(r.filename)}">
+      <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()">
+      <span class="report-icon">📄</span>
+      <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank" class="report-link" title="点击查看完整报告">
+        <span class="report-name">${stockName}</span>
+        ${stockCode ? '<span class="sector-tag" style="font-size:0.68em">'+stockCode+'</span>' : ''}
+        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap">${typeLabel}</span>
+        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap;margin-left:auto">${r.date||''}</span>
       </a>
-      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8em;padding:4px 8px;opacity:0.3;transition:all 0.2s"
-              onclick="deleteReport('${encodeURIComponent(r.filename)}')"
-              onmouseenter="this.style.opacity='1';this.style.color='var(--down)'"
-              onmouseout="this.style.opacity='0.3';this.style.color='var(--muted)'"
-              title="删除">🗑️</button>
+      <button class="report-del" onclick="deleteReport('${encodeURIComponent(r.filename)}', this)" title="${isRemote?'隐藏此报告':'删除此报告'}">🗑️</button>
     </div>`;
   }).join('');
-}
-
-// ── 搜索（增强版：键盘导航 + 拼音 + 智能建议）─────────────────────────
-let searchTimer = null;
-let searchIndex = -1; // 键盘导航的当前选中项
-
-function clearSearch() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchClear').classList.remove('show');
-  hideSearch();
-  document.getElementById('searchInput').focus();
-}
-
-document.getElementById('searchInput').addEventListener('input', function() {
-  clearTimeout(searchTimer);
-  const q = this.value.trim();
-  searchIndex = -1;
-  // 显示/隐藏清除按钮
-  document.getElementById('searchClear').classList.toggle('show', q.length > 0);
-  if (q.length < 1) { hideSearch(); return; }
-  searchTimer = setTimeout(() => doSearch(q), 250);
-});
-
-document.getElementById('searchInput').addEventListener('focus', function() {
-  if (this.value.trim().length >= 1) doSearch(this.value.trim());
-});
-
-// 键盘导航
-document.getElementById('searchInput').addEventListener('keydown', function(e) {
-  const items = document.querySelectorAll('.search-results .result-item');
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    searchIndex = Math.min(searchIndex + 1, items.length - 1);
-    updateSearchHighlight(items);
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    searchIndex = Math.max(searchIndex - 1, 0);
-    updateSearchHighlight(items);
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    if (searchIndex >= 0 && items[searchIndex]) {
-      items[searchIndex].click();
-    } else {
-      const q = this.value.trim();
-      if (q.length >= 2) {
-        hideSearch();
-        // 尝试智能匹配格式
-        let ticker = q;
-        if (/^\d{6}$/.test(q)) ticker = q.startsWith('6') ? q + '.SS' : q + '.SZ';
-        else if (/^\d{5}$/.test(q)) ticker = q + '.SZ';
-        showStockDetail(ticker);
-      }
-    }
-  } else if (e.key === 'Escape') {
-    hideSearch();
-  }
-});
-
-function updateSearchHighlight(items) {
-  items.forEach((item, i) => {
-    item.style.background = i === searchIndex ? 'var(--surface2)' : '';
-  });
-  if (searchIndex >= 0 && items[searchIndex]) {
-    items[searchIndex].scrollIntoView({ block: 'nearest' });
-  }
-}
-
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.search-wrapper')) hideSearch();
-});
-
-async function doSearch(q) {
-  const box = document.getElementById('searchResults');
-  if (q.length < 1) { hideSearch(); return; }
-  box.innerHTML = '<div class="loading">🔍 搜索中...</div>';
-  box.classList.add('show');
-
-  // CDN模式：客户端搜索 (关注列表+本地股票库)
-  if (isRemote) {
-    const results = clientSearch(q);
-    if (!results.length) {
-      box.innerHTML = '<div class="search-no-results"><div style="font-size:1em;margin-bottom:8px">未找到"<b>'+q+'</b>"</div><div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称搜索 (远程模式仅搜索关注列表)</div></div>';
-      return;
-    }
-    box.innerHTML = results.map((r, i) => `
-      <div class="result-item" data-index="${i}" onclick="selectAndView('${r.ticker}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:0.9em">${r.name} <span style="color:var(--muted);font-size:0.75em;font-weight:400">${r.ticker}</span></div>
-          <div style="font-size:0.72em;color:var(--muted);margin-top:2px">
-            ${r.sector?r.sector+' · ':''}${r.source||''} · ${r.exchange||''}
-            ${r.price ? ' · <b style=color:'+(r.changePercent>=0?'var(--up)':'var(--down)')+'>¥'+r.price.toFixed(2)+'</b>' : ' · ⚡无行情'}
-          </div>
-        </div>
-        <div style="text-align:right;white-space:nowrap">
-          ${r.price ? '<div style="font-weight:700;font-size:1em;color:'+(r.changePercent>=0?'var(--up)':'var(--down)')+'">'+(r.changePercent>=0?'+':'')+r.changePercent.toFixed(2)+'%</div>' : '<div style="color:var(--muted);font-size:0.78em">—</div>'}
-          <button class="btn" style="font-size:0.7em;padding:2px 8px;margin-top:4px" onclick="event.stopPropagation();addFav('${r.ticker}','')">⭐自选</button>
-        </div>
-      </div>`).join('');
-    box.innerHTML += '<div class="search-tip">📡 CDN模式 · 关注列表有实时行情 · 其他股票可看基本信息和新闻链接</div>';
-    return;
-  }
-
-  const data = await get(API.search(q));
-  if (!data || !data.results?.length) {
-    const tips = data?.suggestions?.length
-      ? data.suggestions.map(s => `<div style="margin:3px 0">💡 ${s}</div>`).join('')
-      : '💡 试试输入完整代码或名称';
-    box.innerHTML = `<div class="search-no-results">
-      <div style="font-size:1em;margin-bottom:8px">未找到"<b>${q}</b>"相关A股</div>
-      ${tips}
-      <div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称 / 拼音首字母</div>
-    </div>`;
-    return;
-  }
-
-  box.innerHTML = data.results.map((r, i) => `
-    <div class="result-item" data-index="${i}" onclick="selectAndView('${r.ticker}')"
-         onmouseenter="searchIndex=${i};updateSearchHighlight(document.querySelectorAll('.search-results .result-item'))">
-      <div class="stock-info">
-        <span class="stock-name">${r.name} · ${r.ticker} ${_favTickers.has(r.ticker) ? '<span style=\"color:var(--accent);font-size:0.8em\">⭐已加</span>' : ''}</span>
-        <span class="stock-code">${r.sector||''} ${r.exchange||''} · ${r.source||''} · ${r.score||''}分</span>
-      </div>
-      <div class="stock-price">
-        <div class="p">${r.price ? '¥'+F.price(r.price) : '—'}</div>
-        <div class="c ${F.dir(r.changePercent)}">${F.pct(r.changePercent)}</div>
-        <button class="btn" style="font-size:0.7em;padding:3px 6px" onclick="event.stopPropagation();addFav('${r.ticker}','${r.name}')">⭐自选</button>
-        <button class="btn btn-accent" style="font-size:0.7em;padding:3px 6px" onclick="event.stopPropagation();quickAnalyze('${r.ticker}')">📝分析</button>
-      </div>
-    </div>
-  `).join('');
-
-  if (data.hasMore) box.innerHTML += '<div class="search-tip">还有更多结果，请细化搜索关键字</div>';
-  else box.innerHTML += `<div class="search-tip">🖱️ 点击选择 · ⌨️ ↑↓导航 · ↵查看详情 · ${data.count}条结果</div>`;
-}
-
-// 客户端模糊搜索 (CDN模式) — 搜索关注列表+股票库
-const STOCK_DB = [{"c":"bj920000.SZ","n":"安徽凤凰"},{"c":"bj920001.SZ","n":"纬达光电"},{"c":"bj920002.SZ","n":"万达轴承"},{"c":"bj920003.SZ","n":"中诚咨询"},{"c":"bj920005.SZ","n":"鼎佳精密"},{"c":"bj920006.SZ","n":"晟楠科技"},{"c":"bj920007.SZ","n":"酉立智能"},{"c":"bj920008.SZ","n":"成电光信"},{"c":"bj920009.SZ","n":"丹娜生物"},{"c":"bj920010.SZ","n":"凯添燃气"},{"c":"bj920011.SZ","n":"晨光电机"},{"c":"bj920012.SZ","n":"创达新材"},{"c":"bj920014.SZ","n":"特瑞斯"},{"c":"bj920015.SZ","n":"锦华新材"},{"c":"bj920016.SZ","n":"中草香料"},{"c":"bj920017.SZ","n":"星昊医药"},{"c":"bj920018.SZ","n":"宏远股份"},{"c":"bj920019.SZ","n":"铜冠矿建"},{"c":"bj920020.SZ","n":"泰凯英"},{"c":"bj920021.SZ","n":"流金科技"},{"c":"bj920022.SZ","n":"世昌股份"},{"c":"bj920023.SZ","n":"*ST田野"},{"c":"bj920026.SZ","n":"卓兆点胶"},{"c":"bj920027.SZ","n":"交大铁发"},{"c":"bj920028.SZ","n":"新恒泰"},{"c":"bj920029.SZ","n":"DR开发科"},{"c":"bj920030.SZ","n":"德众汽车"},{"c":"bj920033.SZ","n":"康普化学"},{"c":"bj920035.SZ","n":"精创电气"},{"c":"bj920036.SZ","n":"觅睿科技"},{"c":"bj920037.SZ","n":"广信科技"},{"c":"bj920039.SZ","n":"国义招标"},{"c":"bj920045.SZ","n":"蘅东光"},{"c":"bj920046.SZ","n":"亿能电力"},{"c":"bj920047.SZ","n":"诺思兰德"},{"c":"bj920050.SZ","n":"爱舍伦"},{"c":"bj920055.SZ","n":"隆源股份"},{"c":"bj920056.SZ","n":"能之光"},{"c":"bj920057.SZ","n":"百甲科技"},{"c":"bj920058.SZ","n":"XD华洋赛"},{"c":"bj920060.SZ","n":"万源通"},{"c":"bj920061.SZ","n":"西磁科技"},{"c":"bj920062.SZ","n":"科润智控"},{"c":"bj920066.SZ","n":"科拜尔"},{"c":"bj920068.SZ","n":"天工股份"},{"c":"bj920069.SZ","n":"普昂医疗"},{"c":"bj920075.SZ","n":"柏星龙"},{"c":"bj920076.SZ","n":"DR国亮新"},{"c":"bj920077.SZ","n":"吉林碳谷"},{"c":"bj920078.SZ","n":"族兴新材"},{"c":"bj920080.SZ","n":"奥美森"},{"c":"bj920082.SZ","n":"方正阀门"},{"c":"bj920086.SZ","n":"科马材料"},{"c":"bj920087.SZ","n":"秋乐种业"},{"c":"bj920088.SZ","n":"科力股份"},{"c":"bj920089.SZ","n":"禾昌聚合"},{"c":"bj920090.SZ","n":"*ST同辉"},{"c":"bj920091.SZ","n":"大鹏工业"},{"c":"bj920092.SZ","n":"汉鑫科技"},{"c":"bj920096.SZ","n":"嘉晨智能"},{"c":"bj920098.SZ","n":"科隆新材"},{"c":"bj920099.SZ","n":"瑞华技术"},{"c":"bj920100.SZ","n":"三协电机"},{"c":"bj920101.SZ","n":"志高机械"},{"c":"bj920106.SZ","n":"林泰新材"},{"c":"bj920108.SZ","n":"宏海科技"},{"c":"bj920110.SZ","n":"雷特科技"},{"c":"bj920111.SZ","n":"XD聚星科"},{"c":"bj920112.SZ","n":"巴兰仕"},{"c":"bj920116.SZ","n":"星图测控"},{"c":"bj920118.SZ","n":"太湖远大"},{"c":"bj920119.SZ","n":"美德乐"},{"c":"bj920121.SZ","n":"江天科技"},{"c":"bj920122.SZ","n":"中纺标"},{"c":"bj920123.SZ","n":"XD芭薇股"},{"c":"bj920124.SZ","n":"南特科技"},{"c":"bj920125.SZ","n":"鸿仕达"},{"c":"bj920128.SZ","n":"胜业电气"},{"c":"bj920130.SZ","n":"立方控股"},{"c":"bj920132.SZ","n":"泰鹏智能"},{"c":"bj920139.SZ","n":"华岭股份"},{"c":"bj920145.SZ","n":"恒合股份"},{"c":"bj920146.SZ","n":"华阳变速"},{"c":"bj920149.SZ","n":"旭杰科技"},{"c":"bj920152.SZ","n":"昆工科技"},{"c":"bj920156.SZ","n":"海昌智能"},{"c":"bj920158.SZ","n":"长江能科"},{"c":"bj920159.SZ","n":"农大科技"},{"c":"bj920160.SZ","n":"北矿检测"},{"c":"bj920161.SZ","n":"龙辰科技"},{"c":"bj920163.SZ","n":"方大新材"},{"c":"bj920166.SZ","n":"海圣医疗"},{"c":"bj920167.SZ","n":"同享科技"},{"c":"bj920168.SZ","n":"通宝光电"},{"c":"bj920169.SZ","n":"七丰精工"},{"c":"bj920171.SZ","n":"志晟信息"},{"c":"bj920174.SZ","n":"五新智能"},{"c":"bj920175.SZ","n":"东方碳素"},{"c":"bj920177.SZ","n":"恒道科技"},{"c":"bj920178.SZ","n":"锐翔智能"},{"c":"bj920179.SZ","n":"凯德石英"},{"c":"bj920180.SZ","n":"爱得科技"},{"c":"bj920181.SZ","n":"赛英电子"},{"c":"bj920183.SZ","n":"海菲曼"},{"c":"bj920184.SZ","n":"国源科技"},{"c":"bj920185.SZ","n":"贝特瑞"},{"c":"bj920186.SZ","n":"中科仪"},{"c":"bj920187.SZ","n":"通领科技"},{"c":"bj920188.SZ","n":"悦龙科技"},{"c":"bj920190.SZ","n":"雷神科技"},{"c":"bj920191.SZ","n":"瑞尔竞达"},{"c":"bj920195.SZ","n":"三祥科技"},{"c":"bj920198.SZ","n":"微创光电"},{"c":"bj920199.SZ","n":"倍益康"},{"c":"bj920200.SZ","n":"振宏股份"},{"c":"bj920204.SZ","n":"沪江材料"},{"c":"bj920207.SZ","n":"众诚科技"},{"c":"bj920208.SZ","n":"青矩技术"},{"c":"bj920212.SZ","n":"XD智新电"},{"c":"bj920218.SZ","n":"N新天力"},{"c":"bj920220.SZ","n":"朗信电气"},{"c":"bj920221.SZ","n":"易实精密"},{"c":"bj920223.SZ","n":"荣亿精密"},{"c":"bj920225.SZ","n":"利通科技"},{"c":"bj920227.SZ","n":"美登科技"},{"c":"bj920230.SZ","n":"欧康医药"},{"c":"bj920237.SZ","n":"力佳科技"},{"c":"bj920239.SZ","n":"长虹能源"},{"c":"bj920242.SZ","n":"建邦科技"},{"c":"bj920245.SZ","n":"威博液压"},{"c":"bj920247.SZ","n":"华密新材"},{"c":"bj920249.SZ","n":"利尔达"},{"c":"bj920252.SZ","n":"天宏锂电"},{"c":"bj920260.SZ","n":"中寰股份"},{"c":"bj920261.SZ","n":"一诺威"},{"c":"bj920262.SZ","n":"太湖雪"},{"c":"bj920263.SZ","n":"中航泰达"},{"c":"bj920266.SZ","n":"生物谷"},{"c":"bj920267.SZ","n":"鑫汇科"},{"c":"bj920270.SZ","n":"天铭科技"},{"c":"bj920271.SZ","n":"邦德股份"},{"c":"bj920273.SZ","n":"一致魔芋"},{"c":"bj920274.SZ","n":"宏裕包材"},{"c":"bj920275.SZ","n":"驱动力"},{"c":"bj920278.SZ","n":"鹿得医疗"},{"c":"bj920284.SZ","n":"灵鸽科技"},{"c":"bj920299.SZ","n":"灿能电力"},{"c":"bj920300.SZ","n":"辰光医疗"},{"c":"bj920304.SZ","n":"XD迪尔化"},{"c":"bj920305.SZ","n":"*ST云创"},{"c":"bj920339.SZ","n":"恒太照明"},{"c":"bj920344.SZ","n":"三元基因"},{"c":"bj920346.SZ","n":"威贸电子"},{"c":"bj920351.SZ","n":"华光源海"},{"c":"bj920357.SZ","n":"雅葆轩"},{"c":"bj920363.SZ","n":"DR莱赛激"},{"c":"bj920367.SZ","n":"新赣江"},{"c":"bj920368.SZ","n":"连城数控"},{"c":"bj920370.SZ","n":"新安洁"},{"c":"bj920371.SZ","n":"欧福蛋业"},{"c":"bj920374.SZ","n":"云里物里"},{"c":"bj920375.SZ","n":"派诺科技"},{"c":"bj920378.SZ","n":"泰德股份"},{"c":"bj920392.SZ","n":"佳合科技"},{"c":"bj920394.SZ","n":"民士达"},{"c":"bj920395.SZ","n":"朗鸿科技"},{"c":"bj920396.SZ","n":"常辅股份"},{"c":"bj920402.SZ","n":"硅烷科技"},{"c":"bj920403.SZ","n":"康农种业"},{"c":"bj920405.SZ","n":"海希通讯"},{"c":"bj920407.SZ","n":"驰诚股份"},{"c":"bj920414.SZ","n":"欧普泰"},{"c":"bj920415.SZ","n":"恒拓开源"},{"c":"bj920418.SZ","n":"苏轴股份"},{"c":"bj920419.SZ","n":"路斯股份"},{"c":"bj920422.SZ","n":"润普食品"},{"c":"bj920425.SZ","n":"乐创技术"},{"c":"bj920427.SZ","n":"华维设计"},{"c":"bj920429.SZ","n":"康比特"},{"c":"bj920433.SZ","n":"大唐药业"},{"c":"bj920436.SZ","n":"大地电气"},{"c":"bj920438.SZ","n":"戈碧迦"},{"c":"bj920445.SZ","n":"龙竹科技"},{"c":"bj920454.SZ","n":"同心传动"},{"c":"bj920455.SZ","n":"汇隆活塞"},{"c":"bj920469.SZ","n":"富恒新材"},{"c":"bj920471.SZ","n":"美邦科技"},{"c":"bj920475.SZ","n":"三友科技"},{"c":"bj920476.SZ","n":"海能技术"},{"c":"bj920478.SZ","n":"峆一药业"},{"c":"bj920489.SZ","n":"佳先股份"},{"c":"bj920491.SZ","n":"奥迪威"},{"c":"bj920493.SZ","n":"并行科技"},{"c":"bj920496.SZ","n":"许昌智能"},{"c":"bj920504.SZ","n":"博迅生物"},{"c":"bj920505.SZ","n":"九菱科技"},{"c":"bj920508.SZ","n":"殷图网联"},{"c":"bj920509.SZ","n":"同惠电子"},{"c":"bj920510.SZ","n":"丰光精密"},{"c":"bj920519.SZ","n":"万德股份"},{"c":"bj920522.SZ","n":"纳科诺尔"},{"c":"bj920523.SZ","n":"德瑞锂电"},{"c":"bj920526.SZ","n":"凯华材料"},{"c":"bj920527.SZ","n":"夜光明"},{"c":"bj920533.SZ","n":"骏创科技"},{"c":"bj920541.SZ","n":"铁大科技"},{"c":"bj920547.SZ","n":"无锡晶海"},{"c":"bj920553.SZ","n":"凯腾精工"},{"c":"bj920556.SZ","n":"雅达股份"},{"c":"bj920564.SZ","n":"天润科技"},{"c":"bj920566.SZ","n":"梓橦宫"},{"c":"bj920570.SZ","n":"坤博精工"},{"c":"bj920571.SZ","n":"国航远洋"},{"c":"bj920575.SZ","n":"*ST康乐"},{"c":"bj920576.SZ","n":"天力复合"},{"c":"bj920578.SZ","n":"巨能股份"},{"c":"bj920579.SZ","n":"机科股份"},{"c":"bj920580.SZ","n":"科创新材"},{"c":"bj920592.SZ","n":"华信永道"},{"c":"bj920593.SZ","n":"鼎智科技"},{"c":"bj920599.SZ","n":"同力股份"},{"c":"bj920608.SZ","n":"丰安股份"},{"c":"bj920627.SZ","n":"力王股份"},{"c":"bj920634.SZ","n":"新威凌"},{"c":"bj920639.SZ","n":"晨光电缆"},{"c":"bj920640.SZ","n":"富士达"},{"c":"bj920641.SZ","n":"格利尔"},{"c":"bj920642.SZ","n":"通易航天"},{"c":"bj920651.SZ","n":"天罡股份"},{"c":"bj920656.SZ","n":"海昇药业"},{"c":"bj920662.SZ","n":"方盛股份"},{"c":"bj920663.SZ","n":"明阳科技"},{"c":"bj920665.SZ","n":"科强股份"},{"c":"bj920670.SZ","n":"数字人"},{"c":"bj920675.SZ","n":"秉扬科技"},{"c":"bj920679.SZ","n":"前进科技"},{"c":"bj920682.SZ","n":"球冠电缆"},{"c":"bj920685.SZ","n":"新芝生物"},{"c":"bj920689.SZ","n":"克莱特"},{"c":"bj920690.SZ","n":"捷众科技"},{"c":"bj920693.SZ","n":"阿为特"},{"c":"bj920694.SZ","n":"中裕科技"},{"c":"bj920699.SZ","n":"海达尔"},{"c":"bj920701.SZ","n":"豪声电子"},{"c":"bj920703.SZ","n":"广厦环能"},{"c":"bj920706.SZ","n":"铁拓机械"},{"c":"bj920717.SZ","n":"瑞星股份"},{"c":"bj920718.SZ","n":"合肥高科"},{"c":"bj920719.SZ","n":"宁新新材"},{"c":"bj920720.SZ","n":"吉冈精密"},{"c":"bj920725.SZ","n":"惠丰钻石"},{"c":"bj920726.SZ","n":"朱老六"},{"c":"bj920729.SZ","n":"永顺生物"},{"c":"bj920735.SZ","n":"德源药业"},{"c":"bj920748.SZ","n":"路桥信息"},{"c":"bj920751.SZ","n":"惠同新材"},{"c":"bj920753.SZ","n":"天纺标"},{"c":"bj920765.SZ","n":"美之高"},{"c":"bj920768.SZ","n":"拾比佰"},{"c":"bj920770.SZ","n":"艾能聚"},{"c":"bj920779.SZ","n":"武汉蓝电"},{"c":"bj920781.SZ","n":"瑞奇智造"},{"c":"bj920786.SZ","n":"骑士乳业"},{"c":"bj920790.SZ","n":"联迪信息"},{"c":"bj920792.SZ","n":"东和新材"},{"c":"bj920799.SZ","n":"艾融软件"},{"c":"bj920802.SZ","n":"保丽洁"},{"c":"bj920806.SZ","n":"云星宇"},{"c":"bj920807.SZ","n":"奔朗新材"},{"c":"bj920808.SZ","n":"曙光数创"},{"c":"bj920809.SZ","n":"安达科技"},{"c":"bj920810.SZ","n":"春光智能"},{"c":"bj920819.SZ","n":"颖泰生物"},{"c":"bj920821.SZ","n":"则成电子"},{"c":"bj920826.SZ","n":"盖世食品"},{"c":"bj920832.SZ","n":"齐鲁华信"},{"c":"bj920833.SZ","n":"美心翼申"},{"c":"bj920834.SZ","n":"三维装备"},{"c":"bj920837.SZ","n":"华原股份"},{"c":"bj920839.SZ","n":"万通液压"},{"c":"bj920855.SZ","n":"浙江大农"},{"c":"bj920856.SZ","n":"浩淼科技"},{"c":"bj920857.SZ","n":"泓禧科技"},{"c":"bj920866.SZ","n":"绿亨科技"},{"c":"bj920870.SZ","n":"恒进感应"},{"c":"bj920871.SZ","n":"派特尔"},{"c":"bj920873.SZ","n":"中设咨询"},{"c":"bj920876.SZ","n":"慧为智能"},{"c":"bj920879.SZ","n":"基康技术"},{"c":"bj920885.SZ","n":"星辰科技"},{"c":"bj920892.SZ","n":"广咨国际"},{"c":"bj920895.SZ","n":"花溪科技"},{"c":"bj920896.SZ","n":"旺成科技"},{"c":"bj920906.SZ","n":"舜宇精工"},{"c":"bj920914.SZ","n":"远航精密"},{"c":"bj920924.SZ","n":"广脉科技"},{"c":"bj920925.SZ","n":"锦好医疗"},{"c":"bj920926.SZ","n":"XD鸿智科"},{"c":"bj920931.SZ","n":"无锡鼎邦"},{"c":"bj920932.SZ","n":"科达自控"},{"c":"bj920942.SZ","n":"恒立钻具"},{"c":"bj920943.SZ","n":"优机股份"},{"c":"bj920946.SZ","n":"森萱医药"},{"c":"bj920950.SZ","n":"迅安科技"},{"c":"bj920953.SZ","n":"国子软件"},{"c":"bj920957.SZ","n":"汉维科技"},{"c":"bj920961.SZ","n":"创远信科"},{"c":"bj920964.SZ","n":"润农节水"},{"c":"bj920970.SZ","n":"大禹生物"},{"c":"bj920971.SZ","n":"天马新材"},{"c":"bj920974.SZ","n":"凯大催化"},{"c":"bj920976.SZ","n":"视声智能"},{"c":"bj920978.SZ","n":"XD开特股"},{"c":"bj920981.SZ","n":"晶赛科技"},{"c":"bj920982.SZ","n":"锦波生物"},{"c":"bj920985.SZ","n":"海泰新能"},{"c":"bj920992.SZ","n":"中科美菱"},{"c":"600000.SS","n":"浦发银行"},{"c":"600004.SS","n":"白云机场"},{"c":"600006.SS","n":"东风股份"},{"c":"600195.SS","n":"中牧股份"},{"c":"600519.SS","n":"贵州茅台"},{"c":"000858.SZ","n":"五粮液"},{"c":"601318.SS","n":"中国平安"},{"c":"000333.SZ","n":"美的集团"},{"c":"600276.SS","n":"恒瑞医药"},{"c":"002415.SZ","n":"海康威视"},{"c":"300750.SZ","n":"宁德时代"},{"c":"002594.SZ","n":"比亚迪"},{"c":"601012.SS","n":"隆基绿能"},{"c":"300059.SZ","n":"东方财富"},{"c":"000568.SZ","n":"泸州老窖"},{"c":"002714.SZ","n":"牧原股份"},{"c":"000651.SZ","n":"格力电器"},{"c":"601888.SS","n":"中国中免"},{"c":"603259.SS","n":"药明康德"},{"c":"600941.SS","n":"中国移动"},{"c":"688981.SS","n":"中芯国际"},{"c":"300274.SZ","n":"阳光电源"},{"c":"600048.SS","n":"保利发展"},{"c":"601668.SS","n":"中国建筑"},{"c":"600028.SS","n":"中国石化"},{"c":"601857.SS","n":"中国石油"},{"c":"601088.SS","n":"中国神华"},{"c":"600150.SS","n":"中国船舶"},{"c":"002049.SZ","n":"紫光国微"},{"c":"002371.SZ","n":"北方华创"},{"c":"002230.SZ","n":"科大讯飞"},{"c":"300124.SZ","n":"汇川技术"},{"c":"002475.SZ","n":"立讯精密"},{"c":"601138.SS","n":"工业富联"},{"c":"000725.SZ","n":"京东方A"},{"c":"600104.SS","n":"上汽集团"},{"c":"000625.SZ","n":"长安汽车"},{"c":"601633.SS","n":"长城汽车"},{"c":"002352.SZ","n":"顺丰控股"},{"c":"600009.SS","n":"上海机场"},{"c":"601111.SS","n":"中国国航"},{"c":"600015.SS","n":"华夏银行"},{"c":"601166.SS","n":"兴业银行"},{"c":"601398.SS","n":"工商银行"},{"c":"601939.SS","n":"建设银行"},{"c":"601288.SS","n":"农业银行"},{"c":"002142.SZ","n":"宁波银行"},{"c":"600837.SS","n":"海通证券"},{"c":"601211.SS","n":"国泰君安"},{"c":"600570.SS","n":"恒生电子"},{"c":"300033.SZ","n":"同花顺"}];
-
-function clientSearch(q) {
-  const seen = new Set();
-  const results = [];
-  const ql = q.toLowerCase();
-
-  // 1. 先搜索关注列表（有实时数据）
-  for (const s of [...(_watchlistData||[]), ...(_favData||[])]) {
-    if (seen.has(s.ticker)) continue;
-    const matchCode = s.ticker.toLowerCase().includes(ql) || s.ticker.replace('.SS','').replace('.SZ','').includes(ql);
-    const matchName = (s.name||'').toLowerCase().includes(ql) || (s.name||'').includes(q);
-    if (matchCode || matchName) {
-      seen.add(s.ticker);
-      results.push({ ticker:s.ticker, name:s.name, price:s.price, changePercent:s.changePercent, sector:s.sector, exchange:s.ticker.endsWith('.SS')?'沪市':'深市', source:'关注列表' });
-    }
-  }
-
-  // 2. 再搜索全量股票库（含扩展行情）
-  for (const s of STOCK_DB) {
-    if (seen.has(s.c) || results.length >= 15) break;
-    const matchCode = s.c.toLowerCase().includes(ql) || s.c.replace('.SS','').replace('.SZ','').includes(ql);
-    const matchName = (s.n||'').includes(q) || (s.n||'').toLowerCase().includes(ql);
-    if (matchCode || matchName) {
-      seen.add(s.c);
-      const qq = _extQuotes[s.c]; // 扩展行情
-      results.push({ ticker:s.c, name:s.n, price:qq?qq.p:null, changePercent:qq?qq.c:null, sector:'', exchange:s.c.endsWith('.SS')?'沪市':'深市', source:qq?'实时行情':'股票库' });
-    }
-  }
-  return results.slice(0, 12);
-}
-
-function hideSearch() {
-  document.getElementById('searchResults').classList.remove('show');
-  searchIndex = -1;
-}
-
-function selectAndView(ticker) {
-  hideSearch();
-  document.getElementById('searchInput').value = ticker;
-  document.getElementById('searchInput').blur();
-  showStockDetail(ticker);
 }
 
 // ── 股票详情弹窗 ─────────────────────────────────────────────────────────
@@ -922,16 +809,22 @@ async function showStockDetail(ticker) {
 
   // CDN模式：从本地缓存构建详情
   if (isRemote) {
+    // 如果完整股票库未加载，等待加载完成
+    if (!_stockDBLoaded) await loadStockDB();
     let s = (_watchlistData||[]).find(d=>d.ticker===ticker);
     if (!s) {
-      // 从股票库查找基本信息
-      const db = STOCK_DB.find(x=>x.c===ticker);
+      // 先从快速内嵌库查找（100只常用股，始终可用）
+      let db = STOCK_FAST.find(x=>x.c===ticker);
+      // 再从完整库查找（可能还在加载中）
+      if (!db && _stockDBLoaded) db = STOCK_DB.find(x=>x.c===ticker);
       if (db) {
-        s = { ticker: db.c, name: db.n, price: null, changePercent: null, sector: '', open: null, high: null, low: null, volume: null, amount: null };
+        // 注入扩展行情
+        const ext = _extQuotes[db.c];
+        s = { ticker: db.c, name: db.n, price: ext?ext.p:null, changePercent: ext?ext.c:null, volume: ext?ext.v:null, open: null, high: null, low: null, amount: null, sector: '' };
       }
     }
     if (!s) {
-      panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">未找到</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">该代码不在股票库中</div>';
+      panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">未找到</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">股票库加载中，请稍后再试<br><small>或访问 <b>http://localhost:3000</b> 获取完整数据</small></div>';
       return;
     }
     showStockDetailCDN(s);
@@ -1039,7 +932,6 @@ async function showStockDetail(ticker) {
   }
 }
 
-
 function drawDayChart(stock) {
   const canvas = document.getElementById('dayChart');
   if (!canvas) return;
@@ -1126,7 +1018,7 @@ function showStockDetailCDN(s) {
     </div>
     <div class="detail-grid">
       <div class="detail-metric"><div class="dm-label">开盘价</div><div class="dm-value">¥${F.price(s.open)}</div></div>
-      <div class="detail-metric"><div class="dm-label">昨收</div><div class="dm-value">¥${F.price(s.price - (s.change||0))}</div></div>
+      <div class="detail-metric"><div class="dm-label">昨收</div><div class="dm-value">¥${(function(){if(s.changePercent!=null){return F.price(s.price/(1+ +s.changePercent/100));}return F.price(s.price);})()}</div></div>
       <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up)">¥${F.price(s.high)}</div></div>
       <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down)">¥${F.price(s.low)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交量</div><div class="dm-value">${F.vol(s.volume)}</div></div>
@@ -1218,16 +1110,29 @@ async function loadFavorites() {
       return;
     }
     tbody.innerHTML = data.favorites.map(s => {
-      const up = +(s.changePercent || 0) >= 0;
+      // CDN模式: 从扩展行情/关注列表注入实时价格
+      let price = s.price, change = s.change, changePercent = s.changePercent, volume = s.volume, amount = s.amount;
+      if (isRemote) {
+        const wl = (_watchlistData||[]).find(x=>x.ticker===s.ticker);
+        if (wl && wl.price) { price = wl.price; change = wl.change; changePercent = wl.changePercent; volume = wl.volume; amount = wl.amount; }
+        else if (_extQuotes[s.ticker]) { const q=_extQuotes[s.ticker]; price = q.p; changePercent = q.c; volume = q.v; amount = q.a; change = q.p ? (q.p * q.c / 100) : null; }
+      }
+      const cp2 = +(changePercent || 0);
+      let sigScore2 = 50, sigText2 = '震荡观望', sigColor2 = 'var(--accent)', sigBg2 = 'rgba(245,158,11,0.12)', sigBdr2 = 'rgba(245,158,11,0.3)';
+      if (cp2 >= 3) { sigScore2 = 80; sigText2 = '强势看多'; sigColor2 = 'var(--up)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
+      else if (cp2 >= 1) { sigScore2 = 65; sigText2 = '偏多'; sigColor2 = 'var(--up)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
+      else if (cp2 <= -3) { sigScore2 = 20; sigText2 = '弱势回避'; sigColor2 = 'var(--down)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
+      else if (cp2 <= -1) { sigScore2 = 35; sigText2 = '偏弱关注'; sigColor2 = 'var(--down)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
+      const up = +(changePercent || 0) >= 0;
       return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
         <td><b>${s.ticker}</b></td>
         <td><span class="stock-link">${s.name||s.ticker}</span>${s.sector?` <span class="sector-tag">${s.sector}</span>`:''}</td>
-        <td>¥${F.price(s.price)}</td>
-        <td class="${up?'up':'down'}">${F.pct(s.change)}</td>
-        <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
-        <td>${F.vol(s.volume)}</td>
-        <td>${s.amount ? (s.amount/10000).toFixed(2)+'亿' : '—'}</td>
-        <td>${s.signal ? '<span style="color:'+s.signal.color+'">'+s.signal.text+' '+s.signal.score+'分</span>' : '—'}</td>
+        <td>${price ? '¥'+F.price(price) : '—'}</td>
+        <td class="${up?'up':'down'}">${change != null ? (change>0?'+':'')+(+change).toFixed(2) : '—'}</td>
+        <td class="${up?'up':'down'}">${F.pct(changePercent)}</td>
+        <td>${F.vol(volume)}</td>
+        <td>${amount ? (amount/10000).toFixed(2)+'亿' : '—'}</td>
+        <td>${changePercent!=null?'<span class="badge" style="font-size:0.78em;background:'+sigBg2+';color:'+sigColor2+';border:1px solid '+sigBdr2+'">'+sigText2+' · '+sigScore2+'分</span>':'—'}</td>
         <td><button class="btn" style="font-size:0.7em;padding:2px 8px;color:var(--down)" onclick="event.stopPropagation();removeFav('${s.ticker}')">✕ 移除</button></td>
       </tr>`;
     }).join('');
@@ -1236,6 +1141,7 @@ async function loadFavorites() {
 
 // ── 快速分析 ────────────────────────────────────────────────────────────
 async function quickAnalyze(ticker) {
+
   showToast('📝 正在生成分析报告...');
   try {
     const resp = await fetch(API.analyze, {
@@ -1282,16 +1188,91 @@ function exportCSV() {
   showToast('📥 CSV已导出');
 }
 
-// ── 删除报告 ────────────────────────────────────────────────────────────
-async function deleteReport(filename) {
+// ── 客户端报告隐藏 (CDN模式删除用localStorage) ───────────────────────────
+function _getHiddenReports() {
+  try { return new Set(JSON.parse(localStorage.getItem('hidden_reports')||'[]')); }
+  catch { return new Set(); }
+}
+function _hideReport(filename) {
+  const s = _getHiddenReports(); s.add(filename);
+  localStorage.setItem('hidden_reports', JSON.stringify([...s]));
+}
+function _unhideAllReports() {
+  localStorage.removeItem('hidden_reports');
+}
+function _filterHidden(reports) {
+  if (isRemote) { const h = _getHiddenReports(); return reports.filter(r => !h.has(r.filename)); }
+  return reports;
+}
+
+// ── 批量选择 + 删除选中 ──────────────────────────────────────────────────
+function toggleSelectAllReports(btn) {
+  document.querySelectorAll('.report-cb').forEach(cb => { cb.checked = btn.checked; });
+}
+async function deleteSelectedReports() {
+  const checked = document.querySelectorAll('.report-cb:checked');
+  if (checked.length === 0) { showToast('💡 请先勾选要删除的报告'); return; }
+  if (!confirm('⚠️ 确认删除已选中的 '+checked.length+' 份报告？')) return;
+
+  if (isRemote) {
+    // CDN模式：客户端隐藏
+    for (const cb of checked) { _hideReport(cb.dataset.file); }
+    showToast('✅ 已隐藏 '+checked.length+' 份报告'); refreshAll(); return;
+  }
+  showToast('🗑️ 正在删除 '+checked.length+' 份...');
+  let done = 0, fail = 0;
+  for (const cb of checked) {
+    const fn = cb.dataset.file, row = cb.closest('.report-row');
+    if (row) row.classList.add('deleting');
+    try {
+      const resp = await fetch('/api/reports/' + fn, { method: 'DELETE' });
+      if (resp.ok) { const r = await resp.json(); if (r.status==='deleted') { done++; if (row) row.remove(); continue; } }
+      fail++; if (row) row.classList.remove('deleting');
+    } catch(e) { fail++; if (row) row.classList.remove('deleting'); }
+  }
+  showToast(done>0 ? '✅ 已删除 '+done+'/'+(done+fail)+' 份' : '❌ 删除失败'); if (done>0) refreshAll();
+}
+
+// ── 一键删除全部报告 ────────────────────────────────────────────────────
+async function deleteAllReports() {
+  if (!confirm('⚠️ 确认删除所有分析报告？')) return;
+  if (isRemote) {
+    // CDN模式：隐藏全部
+    const rows = document.querySelectorAll('.report-row');
+    rows.forEach(r => { const f = r.dataset.file; if (f) _hideReport(f); });
+    showToast('✅ 已隐藏全部报告'); refreshAll(); return;
+  }
+  showToast('🗑️ 正在批量删除...');
   try {
-    const resp = await fetch('/api/reports/' + filename, { method: 'DELETE' });
+    const resp = await fetch('/api/reports/all', { method: 'DELETE' });
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    const r = await resp.json();
+    if (r.status === 'deleted') { showToast('✅ 已删除 ' + r.count + ' 份报告'); refreshAll(); }
+  } catch(e) { showToast('❌ 批量删除失败: ' + e.message); }
+}
+
+// ── 删除报告 ────────────────────────────────────────────────────────────
+async function deleteReport(filename, btnEl) {
+  if (!confirm('确认删除此分析报告？')) return;
+  let row = btnEl ? btnEl.closest('.report-row') : document.querySelector('[data-file="'+filename+'"]');
+  if (row) row.classList.add('deleting');
+
+  if (isRemote) {
+    // CDN模式：客户端隐藏（localStorage持久化）
+    _hideReport(filename);
+    showToast('🗑️ 已隐藏（刷新后不再显示）');
+    if (row) { row.style.maxHeight = row.offsetHeight+'px'; setTimeout(()=>row.style.maxHeight='0', 50); setTimeout(()=>row.remove(), 400); }
+    return;
+  }
+  try {
+    const resp = await fetch('/api/reports/' + encodeURIComponent(filename), { method: 'DELETE' });
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
     const r = await resp.json();
     if (r.status === 'deleted') {
-      showToast('🗑️ ' + r.message);
-      refreshAll();
+      showToast('🗑️ 已删除');
+      if (row) { row.style.maxHeight = row.offsetHeight+'px'; setTimeout(()=>row.style.maxHeight='0', 50); setTimeout(()=>row.remove(), 400); }
     }
-  } catch(e) { showToast('❌ 删除失败'); }
+  } catch(e) { showToast('❌ 删除失败'); if(row) row.classList.remove('deleting'); }
 }
 
 // Toast 提示
@@ -1311,7 +1292,6 @@ function updateClock() {
 }
 
 // ── 主刷新 ───────────────────────────────────────────────────────────────
-let _extQuotes = {}; // 扩展行情缓存
 
 async function refreshAll() {
   const btn = document.getElementById('refreshBtn');
@@ -1325,6 +1305,8 @@ async function refreshAll() {
         _extQuotes = {};
         data.quotes.forEach(q => { _extQuotes[q.t] = q; });
         console.log('扩展行情加载:', Object.keys(_extQuotes).length, '只');
+        // 更新自选显示（注入实时价格）
+        try { loadFavorites(); } catch {}
       }
     }).catch(() => {});
   }
