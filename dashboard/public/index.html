@@ -754,23 +754,28 @@ function renderAnalysis(recommendations) {
 
 function renderReports(reports) {
   const el = document.getElementById('reportsList');
-  if (!reports?.length) {
+  // CDN模式：过滤已隐藏的报告
+  const visible = _filterHidden(reports || []);
+  const hiddenCount = (reports||[]).length - visible.length;
+
+  if (!visible.length) {
     el.innerHTML = `<div class="no-data">
       📝 暂无分析报告<br><br>
       <small>三种生成方式：<br>
       1️⃣ 搜索股票 → 点 <b>📝分析</b><br>
       2️⃣ 股票详情 → 点 <b>📝 一键分析</b><br>
       3️⃣ 对话输入「深度分析 招商银行」</small>
+      ${hiddenCount > 0 ? '<br><br><button class=\"btn\" onclick=\"_unhideAllReports();refreshAll();\" style=\"font-size:0.8em\">🔄 恢复 '+hiddenCount+' 份已隐藏报告</button>' : ''}
     </div>`;
     return;
   }
-  // 工具栏：全选 + 计数 + 批量删除（CDN模式隐藏删除按钮）
+  // 工具栏
   const delTools = isRemote
-    ? '<span style="font-size:0.72em;color:var(--muted)">📡 在线版 · 只读</span>'
+    ? '<div style="display:flex;gap:6px"><button class="report-del-all" onclick="deleteSelectedReports()">🗑️ 删除选中</button><button class="report-del-all" onclick="deleteAllReports()">🗑️ 全部隐藏</button>' + (hiddenCount>0 ? '<button class="report-del-all" onclick="_unhideAllReports();refreshAll()" style="color:var(--primary);border-color:var(--primary)">🔄 恢复('+hiddenCount+')</button>' : '') + '</div>'
     : '<div style="display:flex;gap:6px"><button class="report-del-all" onclick="deleteSelectedReports()">🗑️ 删除选中</button><button class="report-del-all" onclick="deleteAllReports()">🗑️ 一键清空</button></div>';
   let toolbar = '<div class="report-toolbar">' +
-    '<label class="report-select-all"><input type="checkbox" class="report-check" onclick="toggleSelectAllReports(this)" title="全选/取消" ' + (isRemote ? 'style="display:none"' : '') + '> 全选</label>' +
-    '<span class="report-count">📄 '+reports.length+' 份报告</span>' +
+    '<label class="report-select-all"><input type="checkbox" class="report-check" onclick="toggleSelectAllReports(this)" title="全选/取消"> 全选</label>' +
+    '<span class="report-count">📄 '+visible.length+' 份报告' + (hiddenCount>0?' <span style="color:var(--accent)">('+hiddenCount+'已隐藏)</span>':'') + '</span>' +
     delTools +
     '</div>';
 
@@ -782,7 +787,7 @@ function renderReports(reports) {
     let typeLabel = rawType.includes('deep') ? '📊 深度研报' : rawType.includes('分析') ? '📝 快速分析' : '📄 ' + rawType;
     return `
     <div class="report-row" data-file="${encodeURIComponent(r.filename)}">
-      <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()" ${isRemote?'style="display:none"':''}>
+      <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()">
       <span class="report-icon">📄</span>
       <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank" class="report-link" title="点击查看完整报告">
         <span class="report-name">${stockName}</span>
@@ -790,7 +795,7 @@ function renderReports(reports) {
         <span style="color:var(--muted);font-size:0.7em;white-space:nowrap">${typeLabel}</span>
         <span style="color:var(--muted);font-size:0.7em;white-space:nowrap;margin-left:auto">${r.date||''}</span>
       </a>
-      ${isRemote ? '' : '<button class="report-del" onclick="deleteReport(\'' + encodeURIComponent(r.filename) + '\', this)" title="删除">🗑️</button>'}
+      <button class="report-del" onclick="deleteReport('${encodeURIComponent(r.filename)}', this)" title="${isRemote?'隐藏此报告':'删除此报告'}">🗑️</button>
     </div>`;
   }).join('');
 }
@@ -1183,54 +1188,82 @@ function exportCSV() {
   showToast('📥 CSV已导出');
 }
 
+// ── 客户端报告隐藏 (CDN模式删除用localStorage) ───────────────────────────
+function _getHiddenReports() {
+  try { return new Set(JSON.parse(localStorage.getItem('hidden_reports')||'[]')); }
+  catch { return new Set(); }
+}
+function _hideReport(filename) {
+  const s = _getHiddenReports(); s.add(filename);
+  localStorage.setItem('hidden_reports', JSON.stringify([...s]));
+}
+function _unhideAllReports() {
+  localStorage.removeItem('hidden_reports');
+}
+function _filterHidden(reports) {
+  if (isRemote) { const h = _getHiddenReports(); return reports.filter(r => !h.has(r.filename)); }
+  return reports;
+}
+
 // ── 批量选择 + 删除选中 ──────────────────────────────────────────────────
 function toggleSelectAllReports(btn) {
   document.querySelectorAll('.report-cb').forEach(cb => { cb.checked = btn.checked; });
 }
 async function deleteSelectedReports() {
-  if (isRemote) { showToast('💡 📡 当前为在线版(CDN)，报告由GitHub托管无法在线删除。💡 本地启动 npm run dashboard 后访问 http://localhost:3000 即可删除'); return; }
   const checked = document.querySelectorAll('.report-cb:checked');
   if (checked.length === 0) { showToast('💡 请先勾选要删除的报告'); return; }
-  if (!confirm('⚠️ 确认删除已选中的 '+checked.length+' 份报告？此操作不可恢复。')) return;
+  if (!confirm('⚠️ 确认删除已选中的 '+checked.length+' 份报告？')) return;
+
+  if (isRemote) {
+    // CDN模式：客户端隐藏
+    for (const cb of checked) { _hideReport(cb.dataset.file); }
+    showToast('✅ 已隐藏 '+checked.length+' 份报告'); refreshAll(); return;
+  }
   showToast('🗑️ 正在删除 '+checked.length+' 份...');
   let done = 0, fail = 0;
   for (const cb of checked) {
-    const filename = cb.dataset.file;
-    const row = cb.closest('.report-row');
+    const fn = cb.dataset.file, row = cb.closest('.report-row');
     if (row) row.classList.add('deleting');
     try {
-      const resp = await fetch('/api/reports/' + filename, { method: 'DELETE' });
+      const resp = await fetch('/api/reports/' + fn, { method: 'DELETE' });
       if (resp.ok) { const r = await resp.json(); if (r.status==='deleted') { done++; if (row) row.remove(); continue; } }
       fail++; if (row) row.classList.remove('deleting');
     } catch(e) { fail++; if (row) row.classList.remove('deleting'); }
   }
-  if (done > 0) { showToast('✅ 已删除 '+done+'/'+(done+fail)+' 份'); refreshAll(); }
-  else { showToast('❌ 删除失败，请确认服务器在运行'); }
+  showToast(done>0 ? '✅ 已删除 '+done+'/'+(done+fail)+' 份' : '❌ 删除失败'); if (done>0) refreshAll();
 }
 
 // ── 一键删除全部报告 ────────────────────────────────────────────────────
 async function deleteAllReports() {
-  if (isRemote) { showToast('💡 📡 当前为在线版(CDN)，报告由GitHub托管无法在线删除。💡 本地启动 npm run dashboard 后访问 http://localhost:3000 即可删除'); return; }
-  if (!confirm('⚠️ 确认删除所有分析报告？此操作不可恢复。')) return;
+  if (!confirm('⚠️ 确认删除所有分析报告？')) return;
+  if (isRemote) {
+    // CDN模式：隐藏全部
+    const rows = document.querySelectorAll('.report-row');
+    rows.forEach(r => { const f = r.dataset.file; if (f) _hideReport(f); });
+    showToast('✅ 已隐藏全部报告'); refreshAll(); return;
+  }
   showToast('🗑️ 正在批量删除...');
   try {
     const resp = await fetch('/api/reports/all', { method: 'DELETE' });
     if (!resp.ok) throw new Error('HTTP '+resp.status);
     const r = await resp.json();
-    if (r.status === 'deleted') {
-      showToast('✅ 已删除 ' + r.count + ' 份报告');
-      refreshAll();
-    }
+    if (r.status === 'deleted') { showToast('✅ 已删除 ' + r.count + ' 份报告'); refreshAll(); }
   } catch(e) { showToast('❌ 批量删除失败: ' + e.message); }
 }
 
 // ── 删除报告 ────────────────────────────────────────────────────────────
 async function deleteReport(filename, btnEl) {
-  if (isRemote) { showToast('💡 📡 当前为在线版(CDN)，报告由GitHub托管无法在线删除。💡 本地启动 npm run dashboard 后访问 http://localhost:3000 即可删除'); return; }
   if (!confirm('确认删除此分析报告？')) return;
-  // 视觉反馈：行淡出
   let row = btnEl ? btnEl.closest('.report-row') : document.querySelector('[data-file="'+filename+'"]');
   if (row) row.classList.add('deleting');
+
+  if (isRemote) {
+    // CDN模式：客户端隐藏（localStorage持久化）
+    _hideReport(filename);
+    showToast('🗑️ 已隐藏（刷新后不再显示）');
+    if (row) { row.style.maxHeight = row.offsetHeight+'px'; setTimeout(()=>row.style.maxHeight='0', 50); setTimeout(()=>row.remove(), 400); }
+    return;
+  }
   try {
     const resp = await fetch('/api/reports/' + encodeURIComponent(filename), { method: 'DELETE' });
     if (!resp.ok) throw new Error('HTTP '+resp.status);
