@@ -243,6 +243,29 @@
     .no-data { padding: 24px; text-align: center; color: var(--muted); font-size: 0.9em; }
     .no-data small { font-size: 0.85em; }
 
+    /* 报告列表增强 */
+    .report-row { display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);gap:10px;transition:all 0.3s; }
+    .report-row:hover { background:rgba(79,140,255,0.06); }
+    .report-row.deleting { opacity:0;transform:translateX(20px);pointer-events:none; }
+    .report-check { width:16px;height:16px;cursor:pointer;accent-color:var(--primary);flex-shrink:0; }
+    .report-select-all { font-size:0.7em;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap;display:flex;align-items:center;gap:4px; }
+    .report-select-all:hover { color:var(--primary); }
+    .report-link { color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;flex:1;min-width:0; }
+    .report-link:hover { color:var(--primary); }
+    .report-link:hover .report-name { color:var(--primary); }
+    .report-name { font-weight:600;transition:color 0.15s; }
+    .report-icon { font-size:1.1em;flex-shrink:0; }
+    .report-info { display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline; }
+    .report-del {
+      background:none;border:1px solid transparent;color:var(--muted);cursor:pointer;
+      font-size:0.78em;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;flex-shrink:0;
+    }
+    .report-del:hover { color:#fff;background:rgba(220,38,38,0.7);border-color:rgba(220,38,38,0.5); }
+    .report-del-all { font-size:0.7em;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all 0.2s;white-space:nowrap; }
+    .report-del-all:hover { border-color:rgba(220,38,38,0.5);color:#ef4444;background:rgba(220,38,38,0.1); }
+    .report-toolbar { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap; }
+    .report-count { font-size:0.75em;color:var(--muted); }
+
     /* 底部 */
     .footer {
       text-align: center; padding: 20px; color: var(--muted);
@@ -436,7 +459,7 @@
 
   <!-- 最近报告 -->
   <div class="card">
-    <div class="card-title">📄 最近分析报告 <button class="btn" style="font-size:0.7em;margin-left:12px;color:var(--down);border-color:var(--down-border)" onclick="deleteAllReports()" title="一键删除全部报告">🗑️ 一键清空</button></div>
+    <div class="card-title">📄 最近分析报告 </div>
     <div class="report-list" id="reportsList"><div class="loading">加载中...</div></div>
   </div>
 
@@ -732,300 +755,35 @@ function renderReports(reports) {
     </div>`;
     return;
   }
-  el.innerHTML = reports.map(r => {
+  // 工具栏：全选 + 计数 + 批量删除
+  let toolbar = '<div class="report-toolbar">' +
+    '<label class="report-select-all"><input type="checkbox" class="report-check" onclick="toggleSelectAllReports(this)" title="全选/取消"> 全选</label>' +
+    '<span class="report-count">共 '+reports.length+' 份</span>' +
+    '<div style="display:flex;gap:6px">' +
+      '<button class="report-del-all" onclick="deleteSelectedReports()" title="删除选中报告">🗑️ 删除选中</button>' +
+      '<button class="report-del-all" onclick="deleteAllReports()" title="一键删除全部报告">🗑️ 一键清空</button>' +
+    '</div>' +
+    '</div>';
+
+  el.innerHTML = toolbar + reports.map(r => {
     const parts = r.filename.replace('.md','').split('_');
     const stockName = parts[0] || '';
     const stockCode = parts[1] || '';
     const reportType = parts[2] || '分析';
     return `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank"
-         style="color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px" title="点击查看">
-        <span style="font-size:1.2em">📄</span>
-        <div>
-          <span style="font-weight:600">${stockName}</span>
-          <span style="color:var(--muted);font-size:0.85em;margin-left:4px">${stockCode}</span>
-          <span style="color:var(--muted);font-size:0.75em;margin-left:12px">${reportType} · ${r.date}</span>
+    <div class="report-row" data-file="${encodeURIComponent(r.filename)}">
+      <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()">
+      <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank" class="report-link" title="在新标签页查看">
+        <span class="report-icon">📄</span>
+        <div class="report-info">
+          <span class="report-name">${stockName}</span>
+          <span style="color:var(--muted);font-size:0.82em">${stockCode}</span>
+          <span style="color:var(--muted);font-size:0.72em">${reportType} · ${r.date}</span>
         </div>
       </a>
-      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8em;padding:4px 8px;opacity:0.3;transition:all 0.2s"
-              onclick="deleteReport('${encodeURIComponent(r.filename)}')"
-              onmouseenter="this.style.opacity='1';this.style.color='var(--down)'"
-              onmouseout="this.style.opacity='0.3';this.style.color='var(--muted)'"
-              title="删除">🗑️</button>
+      <button class="report-del" onclick="deleteReport('${encodeURIComponent(r.filename)}', this)" title="删除此报告">🗑️ 删除</button>
     </div>`;
   }).join('');
-}
-
-// ── 搜索（增强版：键盘导航 + 拼音 + 智能建议）─────────────────────────
-let searchTimer = null;
-let searchIndex = -1; // 键盘导航的当前选中项
-
-function clearSearch() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchClear').classList.remove('show');
-  hideSearch();
-  document.getElementById('searchInput').focus();
-}
-
-document.getElementById('searchInput').addEventListener('input', function() {
-  clearTimeout(searchTimer);
-  const q = this.value.trim();
-  searchIndex = -1;
-  // 显示/隐藏清除按钮
-  document.getElementById('searchClear').classList.toggle('show', q.length > 0);
-  if (q.length < 1) { hideSearch(); return; }
-  searchTimer = setTimeout(() => { loadStockDB(); doSearch(q); }, 250);
-});
-
-document.getElementById('searchInput').addEventListener('focus', function() {
-  if (this.value.trim().length >= 1) doSearch(this.value.trim());
-});
-
-// 键盘导航
-document.getElementById('searchInput').addEventListener('keydown', function(e) {
-  const items = document.querySelectorAll('.search-results .result-item');
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    searchIndex = Math.min(searchIndex + 1, items.length - 1);
-    updateSearchHighlight(items);
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    searchIndex = Math.max(searchIndex - 1, 0);
-    updateSearchHighlight(items);
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    if (searchIndex >= 0 && items[searchIndex]) {
-      items[searchIndex].click();
-    } else {
-      const q = this.value.trim();
-      if (q.length >= 2) {
-        hideSearch();
-        // 尝试智能匹配格式
-        let ticker = q;
-        if (/^\d{6}$/.test(q)) ticker = q.startsWith('6') ? q + '.SS' : q + '.SZ';
-        else if (/^\d{5}$/.test(q)) ticker = q + '.SZ';
-        showStockDetail(ticker);
-      }
-    }
-  } else if (e.key === 'Escape') {
-    hideSearch();
-  }
-});
-
-function updateSearchHighlight(items) {
-  items.forEach((item, i) => {
-    item.style.background = i === searchIndex ? 'var(--surface2)' : '';
-  });
-  if (searchIndex >= 0 && items[searchIndex]) {
-    items[searchIndex].scrollIntoView({ block: 'nearest' });
-  }
-}
-
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.search-wrapper')) hideSearch();
-});
-
-function doSearchRetry(q) {
-  const box = document.getElementById('searchResults');
-  const results = clientSearch(q);
-  if (results.length) {
-    box.innerHTML = results.map((r, i) => buildSearchItemHTML(r)).join('') + '<div class="search-tip">📡 CDN模式 · 185只有实时行情 · 其余可看基本信息</div>';
-  }
-}
-function buildSearchItemHTML(r) {
-  const up = (+(r.changePercent||0)) >= 0;
-  const priceColor = r.price ? (up ? 'var(--up)' : 'var(--down)') : 'var(--muted)';
-  return '<div class="result-item" onclick="selectAndView(\''+r.ticker+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px">'+
-    '<div style="flex:1;min-width:0">'+
-      '<div style="font-weight:600;font-size:0.9em">'+r.name+' <span style="color:var(--muted);font-size:0.75em;font-weight:400">'+r.ticker+'</span></div>'+
-      '<div style="font-size:0.72em;color:var(--muted);margin-top:2px">'+
-        (r.sector?r.sector+' · ':'')+(r.source||'')+' · '+(r.exchange||'')+
-        (r.price ? ' · <b style=color:'+priceColor+'>¥'+r.price.toFixed(2)+'</b>' : ' · ⚡无行情')+
-      '</div>'+
-    '</div>'+
-    '<div style="text-align:right;white-space:nowrap">'+
-      (r.price ? '<div style="font-weight:700;font-size:1em;color:'+priceColor+'">'+(up?'+':'')+(r.changePercent||0).toFixed(2)+'%</div>' : '<div style="color:var(--muted);font-size:0.78em">—</div>')+
-      '<button class="btn" style="font-size:0.7em;padding:2px 8px;margin-top:4px" onclick="event.stopPropagation();addFav(\''+r.ticker+'\',\''+(r.name||'')+'\')">⭐自选</button>'+
-    '</div>'+
-  '</div>';
-}
-
-async function doSearch(q) {
-  const box = document.getElementById('searchResults');
-  if (q.length < 1) { hideSearch(); return; }
-  box.innerHTML = '<div class="loading">🔍 搜索中...</div>';
-  box.classList.add('show');
-
-  // CDN模式：客户端搜索 (关注列表+本地股票库)
-  if (isRemote) {
-    const results = clientSearch(q);
-    if (!results.length) {
-      const dbHint = _stockDBLoaded ? '' : '<div style="font-size:0.78em;color:var(--info);margin-top:6px">⏳ 正在加载全量A股库(5207只)...请稍后再搜</div>';
-      box.innerHTML = '<div class="search-no-results"><div style="font-size:1em;margin-bottom:8px">未找到"<b>'+q+'</b>"</div><div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称 / 拼音首字母 · 5207只A股全覆盖</div>'+dbHint+'</div>';
-      if (!_stockDBLoaded) { loadStockDB().then(function(){ var qq=document.getElementById('searchInput').value.trim(); if(qq===q){ var retry=clientSearch(q); if(retry.length){ box.innerHTML=retry.map(function(r){return buildSearchItemHTML(r);}).join('')+'<div class="search-tip">📡 CDN · '+Object.keys(_extQuotes).length+'只有实时行情</div>'; } } }); }
-      return;
-    }
-    box.innerHTML = results.map((r) => buildSearchItemHTML(r)).join('');
-    box.innerHTML += '<div class="search-tip">📡 CDN模式 · '+Object.keys(_extQuotes).length+'只有实时行情 · 5207只可搜基本信息</div>';
-    return;
-  }
-
-  const data = await get(API.search(q));
-  if (!data || !data.results?.length) {
-    const tips = data?.suggestions?.length
-      ? data.suggestions.map(s => `<div style="margin:3px 0">💡 ${s}</div>`).join('')
-      : '💡 试试输入完整代码或名称';
-    box.innerHTML = `<div class="search-no-results">
-      <div style="font-size:1em;margin-bottom:8px">未找到"<b>${q}</b>"相关A股</div>
-      ${tips}
-      <div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称 / 拼音首字母</div>
-    </div>`;
-    return;
-  }
-
-  box.innerHTML = data.results.map((r, i) => `
-    <div class="result-item" data-index="${i}" onclick="selectAndView('${r.ticker}')"
-         onmouseenter="searchIndex=${i};updateSearchHighlight(document.querySelectorAll('.search-results .result-item'))">
-      <div class="stock-info">
-        <span class="stock-name">${r.name} · ${r.ticker} ${_favTickers.has(r.ticker) ? '<span style=\"color:var(--accent);font-size:0.8em\">⭐已加</span>' : ''}</span>
-        <span class="stock-code">${r.sector||''} ${r.exchange||''} · ${r.source||''} · ${r.score||''}分</span>
-      </div>
-      <div class="stock-price">
-        <div class="p">${r.price ? '¥'+F.price(r.price) : '—'}</div>
-        <div class="c ${F.dir(r.changePercent)}">${F.pct(r.changePercent)}</div>
-        <button class="btn" style="font-size:0.7em;padding:3px 6px" onclick="event.stopPropagation();addFav('${r.ticker}','${r.name}')">⭐自选</button>
-        <button class="btn btn-accent" style="font-size:0.7em;padding:3px 6px" onclick="event.stopPropagation();quickAnalyze('${r.ticker}')">📝分析</button>
-      </div>
-    </div>
-  `).join('');
-
-  if (data.hasMore) box.innerHTML += '<div class="search-tip">还有更多结果，请细化搜索关键字</div>';
-  else box.innerHTML += `<div class="search-tip">🖱️ 点击选择 · ⌨️ ↑↓导航 · ↵查看详情 · ${data.count}条结果</div>`;
-}
-
-// 客户端模糊搜索 (CDN模式) — 搜索关注列表+股票库
-
-// 全量A股股票库 — CDN按需加载(5207只沪深股票)
-let STOCK_DB = [];
-let _stockDBLoaded = false;
-async function loadStockDB() {
-  if (_stockDBLoaded) return;
-  try {
-    const r = await fetch(CDN + '/stock_list.json', { cache: 'force-cache' });
-    if (r.ok) {
-      const data = await r.json();
-      STOCK_DB = data;
-      _stockDBLoaded = true;
-      console.log('股票库加载完成:', STOCK_DB.length, '只');
-    }
-  } catch(e) { console.error('股票库加载失败:', e.message); }
-}
-// 轻量内嵌股票库（首屏快速搜索，100只常用股）
-const STOCK_FAST = [{c:'600000.SS',n:'浦发银行'},{c:'600009.SS',n:'上海机场'},{c:'600015.SS',n:'华夏银行'},{c:'600016.SS',n:'民生银行'},{c:'600028.SS',n:'中国石化'},{c:'600029.SS',n:'南方航空'},{c:'600030.SS',n:'中信证券'},{c:'600031.SS',n:'三一重工'},{c:'600036.SS',n:'招商银行'},{c:'600048.SS',n:'保利发展'},{c:'600050.SS',n:'中国联通'},{c:'600085.SS',n:'同仁堂'},{c:'600104.SS',n:'上汽集团'},{c:'600111.SS',n:'北方稀土'},{c:'600150.SS',n:'中国船舶'},{c:'600188.SS',n:'兖矿能源'},{c:'600195.SS',n:'中牧股份'},{c:'600196.SS',n:'复星医药'},{c:'600276.SS',n:'恒瑞医药'},{c:'600309.SS',n:'万华化学'},{c:'600406.SS',n:'国电南瑞'},{c:'600436.SS',n:'片仔癀'},{c:'600438.SS',n:'通威股份'},{c:'600519.SS',n:'贵州茅台'},{c:'600547.SS',n:'山东黄金'},{c:'600570.SS',n:'恒生电子'},{c:'600585.SS',n:'海螺水泥'},{c:'600690.SS',n:'海尔智家'},{c:'600809.SS',n:'山西汾酒'},{c:'600837.SS',n:'海通证券'},{c:'600887.SS',n:'伊利股份'},{c:'600900.SS',n:'长江电力'},{c:'600941.SS',n:'中国移动'},{c:'601012.SS',n:'隆基绿能'},{c:'601088.SS',n:'中国神华'},{c:'601111.SS',n:'中国国航'},{c:'601138.SS',n:'工业富联'},{c:'601166.SS',n:'兴业银行'},{c:'601288.SS',n:'农业银行'},{c:'601318.SS',n:'中国平安'},{c:'601398.SS',n:'工商银行'},{c:'601628.SS',n:'中国人寿'},{c:'601633.SS',n:'长城汽车'},{c:'601668.SS',n:'中国建筑'},{c:'601688.SS',n:'华泰证券'},{c:'601728.SS',n:'中国电信'},{c:'601857.SS',n:'中国石油'},{c:'601888.SS',n:'中国中免'},{c:'601899.SS',n:'紫金矿业'},{c:'601919.SS',n:'中远海控'},{c:'601939.SS',n:'建设银行'},{c:'601988.SS',n:'中国银行'},{c:'603259.SS',n:'药明康德'},{c:'603288.SS',n:'海天味业'},{c:'688981.SS',n:'中芯国际'},{c:'000001.SZ',n:'平安银行'},{c:'000002.SZ',n:'万科A'},{c:'000063.SZ',n:'中兴通讯'},{c:'000100.SZ',n:'TCL科技'},{c:'000333.SZ',n:'美的集团'},{c:'000538.SZ',n:'云南白药'},{c:'000568.SZ',n:'泸州老窖'},{c:'000625.SZ',n:'长安汽车'},{c:'000651.SZ',n:'格力电器'},{c:'000725.SZ',n:'京东方A'},{c:'000858.SZ',n:'五粮液'},{c:'000876.SZ',n:'新希望'},{c:'000895.SZ',n:'双汇发展'},{c:'000938.SZ',n:'紫光股份'},{c:'000977.SZ',n:'浪潮信息'},{c:'002007.SZ',n:'华兰生物'},{c:'002027.SZ',n:'分众传媒'},{c:'002049.SZ',n:'紫光国微'},{c:'002142.SZ',n:'宁波银行'},{c:'002195.SZ',n:'岩山科技'},{c:'002230.SZ',n:'科大讯飞'},{c:'002241.SZ',n:'歌尔股份'},{c:'002271.SZ',n:'东方雨虹'},{c:'002304.SZ',n:'洋河股份'},{c:'002352.SZ',n:'顺丰控股'},{c:'002371.SZ',n:'北方华创'},{c:'002415.SZ',n:'海康威视'},{c:'002459.SZ',n:'晶澳科技'},{c:'002460.SZ',n:'赣锋锂业'},{c:'002466.SZ',n:'天齐锂业'},{c:'002475.SZ',n:'立讯精密'},{c:'002594.SZ',n:'比亚迪'},{c:'002714.SZ',n:'牧原股份'},{c:'002736.SZ',n:'国信证券'},{c:'300014.SZ',n:'亿纬锂能'},{c:'300015.SZ',n:'爱尔眼科'},{c:'300033.SZ',n:'同花顺'},{c:'300059.SZ',n:'东方财富'},{c:'300122.SZ',n:'智飞生物'},{c:'300124.SZ',n:'汇川技术'},{c:'300274.SZ',n:'阳光电源'},{c:'300498.SZ',n:'温氏股份'},{c:'300750.SZ',n:'宁德时代'},{c:'300760.SZ',n:'迈瑞医疗'}];
-
-// 拼音首字母搜索辅助
-function pyMatch(name, q) {
-  if (!name) return false;
-  let py = '';
-  const map = {
-    '中':'z','牧':'m','股':'g','份':'f','贵':'g','州':'z','茅':'m','台':'t','五':'w','粮':'l','液':'y',
-    '招':'z','商':'s','银':'y','行':'h','平':'p','安':'a','浦':'p','发':'f','民':'m','生':'s','兴':'x','业':'y',
-    '华':'h','夏':'x','建':'j','设':'s','工':'g','农':'n','交':'j','通':'t','邮':'y','储':'c',
-    '海':'h','国':'g','泰':'t','君':'j','光':'g','大':'d','申':'s','万':'w','宏':'h','源':'y','东':'d',
-    '方':'f','广':'g','长':'c','江':'j','电':'d','力':'l','三':'s','一':'y','重':'z','工':'g','徐':'x',
-    '上':'s','汽':'q','集':'j','团':'t','北':'b','京':'j','车':'c','比':'b','亚':'y','迪':'d',
-    '宁':'n','德':'d','时':'s','代':'d','阳':'y','光':'g','隆':'l','基':'j','绿':'l','通':'t','威':'w',
-    '药':'y','明':'m','康':'k','恒':'h','瑞':'r','医':'y','复':'f','星':'x','片':'p','仔':'z','癀':'h',
-    '同':'t','仁':'r','堂':'t','白':'b','云':'y','山':'s','尔':'e','眼':'y','科':'k','迈':'m','智':'z',
-    '飞':'f','生':'s','物':'w','春':'c','高':'g','新':'x','兰':'l','莱':'l','士':'s','原':'y','温':'w','氏':'s',
-    '双':'s','汇':'h','金':'j','龙':'l','鱼':'y','天':'t','味':'w','洋':'y','河':'h','泸':'l','老':'l','窖':'j',
-    '古':'g','井':'j','贡':'g','山':'s','西':'x','汾':'f','科':'k','万':'w','保':'b','利':'l','蛇':'s',
-    '筑':'z','铁':'t','电':'d','核':'h','石':'s','油':'y','化':'h','神':'s','煤':'m','兖':'y','矿':'k',
-    '紫':'z','洛':'l','钼':'m','江':'j','铜':'t','云':'y','铝':'l','南':'n',
-    '宝':'b','钢':'g','鞍':'a','首':'s','包':'b','太':'t','锈':'x','马':'m',
-    '螺':'l','水':'s','泥':'n','冀':'j','年':'n','伊':'y','蒙':'m','牛':'n','明':'m','元':'y','贝':'b','因':'y','美':'m',
-    '分':'f','众':'z','传':'c','媒':'m','芒':'g','果':'g','超':'c','线':'x','谊':'y',
-    '顺':'s','花':'h','财':'c','富':'f','慧':'h','网':'w','络':'l','办':'b','公':'g','讯':'x',
-    '康':'k','威':'w','视':'s','紫':'z','浪':'l','潮':'c','曙':'s','创':'c','微':'w','尔':'e','兆':'z','易':'y',
-    '卓':'z','胜':'s','歌':'g','立':'l','讯':'x','精':'j','密':'m','蓝':'l','思':'s',
-    'T':'t','C':'c','L':'l','深':'s','马':'m','维':'w','诺':'n',
-    '汇':'h','川':'c','先':'x','导':'d','晶':'j','盛':'s','锦':'j','固':'g',
-    '赐':'c','材':'c','料':'l','恩':'e','捷':'j','璞':'p','泰':'t','来':'l','杉':'s','当':'d','升':'s',
-    '容':'r','百':'b','方':'f','碳':'t','翔':'x','丰':'f','鲁':'l',
-    '力':'l','荣':'r','虹':'h','卫':'w','学':'x','佰':'b','和':'h','成':'c','浙':'z','龙':'l',
-    '阿':'a','胶':'j','应':'y','健':'j','民':'m','九':'j','芝':'z',
-    '润':'r','昆':'k','以':'y','岭':'l','人':'r','寿':'s','保':'b','险':'x',
-    '移':'y','动':'d','联':'l','信':'x','控':'k','圆':'y','韵':'y','达':'d','邦':'b',
-    '航':'h','空':'k','秋':'q','吉':'j','祥':'x','机':'j','场':'c','圳':'z',
-    '免':'m','王':'w','府':'f','百':'b','红':'h','旗':'q','连':'l',
-    '辉':'h','超':'c','市':'s','家':'j','悦':'y','步':'b','江':'j',
-    '船':'c','舶':'b','发':'f','沈':'s','西':'x',
-    '能':'n','源':'y','汽':'q','伏':'f','风':'f','储':'c',
-    '东':'d','阿':'a','黑':'h','牡':'m','丹':'d','大':'d','连':'l','青':'q','岛':'d',
-    '烟':'y','台':'t','威':'w','日':'r','照':'z','临':'l','沂':'y','德':'d','州':'z',
-    '聊':'l','城':'c','滨':'b','菏':'h','泽':'z','济':'j','宁':'n','泰':'t','安':'a',
-    '莱':'l','芜':'w','淄':'z','博':'b','枣':'z','庄':'z','东':'d','营':'y',
-    '郑':'z','开':'k','封':'f','洛':'l','阳':'y','平':'p','顶':'d','安':'a','鹤':'h','壁':'b',
-    '新':'x','乡':'x','焦':'j','濮':'p','许':'x','漯':'l','河':'h','三':'s','门':'m','峡':'x',
-    '商':'s','丘':'q','周':'z','口':'k','驻':'z','马':'m','店':'d','南':'n','信':'x',
-    '武':'w','汉':'h','黄':'h','石':'s','十':'s','堰':'y','宜':'y','昌':'c','襄':'x','樊':'f',
-    '鄂':'e','荆':'j','孝':'x','黄':'h','冈':'g','咸':'x','随':'s','恩':'e','施':'s',
-    '长':'c','沙':'s','株':'z','湘':'x','潭':'t','衡':'h','邵':'s','岳':'y','常':'c','张':'z',
-    '益':'y','郴':'c','永':'y','怀':'h','娄':'l','底':'d',
-    '成':'c','都':'d','自':'z','贡':'g','攀':'p','枝':'z','泸':'l','德':'d','绵':'m','广':'g',
-    '遂':'s','内':'n','乐':'l','南':'n','眉':'m','宜':'y','广':'g','达':'d','雅':'y','巴':'b',
-    '资':'z','阿':'a','甘':'g','凉':'l','贵':'g','六':'l','盘':'p','遵':'z','安':'a','毕':'b',
-    '铜':'t','黔':'q','西':'x','昆':'k','曲':'q','玉':'y','保':'b','昭':'z','丽':'l',
-    '普':'p','临':'l','楚':'c','红':'h','文':'w','大':'d','怒':'n','迪':'d'
-  };
-  for (const ch of name) {
-    py += map[ch] || '';
-  }
-  const ql = q.toLowerCase();
-  return py.startsWith(ql) || py.includes(ql);
-}
-
-function clientSearch(q) {
-  const seen = new Set();
-  const results = [];
-  const ql = q.toLowerCase();
-
-  // 1. 先搜索关注列表（有实时数据）
-  for (const s of [...(_watchlistData||[]), ...(_favData||[])]) {
-    if (seen.has(s.ticker)) continue;
-    const matchCode = s.ticker.toLowerCase().includes(ql) || s.ticker.replace('.SS','').replace('.SZ','').includes(ql);
-    const matchName = (s.name||'').toLowerCase().includes(ql) || (s.name||'').includes(q); const matchPy = pyMatch(s.name, q);
-    if (matchCode || matchName || matchPy) {
-      seen.add(s.ticker);
-      results.push({ ticker:s.ticker, name:s.name, price:s.price, changePercent:s.changePercent, sector:s.sector, exchange:s.ticker.endsWith('.SS')?'沪市':'深市', source:'关注列表' });
-    }
-  }
-
-  // 2. 再搜索全量股票库（含扩展行情）
-  for (const s of (_stockDBLoaded ? STOCK_DB : STOCK_FAST)) {
-    if (seen.has(s.c) || results.length >= 15) break;
-    const matchCode = s.c.toLowerCase().includes(ql) || s.c.replace('.SS','').replace('.SZ','').includes(ql);
-    const matchName = (s.n||'').includes(q) || (s.n||'').toLowerCase().includes(ql); const matchPy2 = pyMatch(s.n, q);
-    if (matchCode || matchName || matchPy2) {
-      seen.add(s.c);
-      const qq = _extQuotes[s.c]; // 扩展行情
-      results.push({ ticker:s.c, name:s.n, price:qq?qq.p:null, changePercent:qq?qq.c:null, sector:'', exchange:s.c.endsWith('.SS')?'沪市':'深市', source:qq?'实时行情':'股票库' });
-    }
-  }
-  return results.slice(0, 12);
-}
-
-function hideSearch() {
-  document.getElementById('searchResults').classList.remove('show');
-  searchIndex = -1;
-}
-
-function selectAndView(ticker) {
-  hideSearch();
-  document.getElementById('searchInput').value = ticker;
-  document.getElementById('searchInput').blur();
-  showStockDetail(ticker);
 }
 
 // ── 股票详情弹窗 ─────────────────────────────────────────────────────────
@@ -1416,6 +1174,31 @@ function exportCSV() {
   showToast('📥 CSV已导出');
 }
 
+// ── 批量选择 + 删除选中 ──────────────────────────────────────────────────
+function toggleSelectAllReports(btn) {
+  document.querySelectorAll('.report-cb').forEach(cb => { cb.checked = btn.checked; });
+}
+async function deleteSelectedReports() {
+  const checked = document.querySelectorAll('.report-cb:checked');
+  if (checked.length === 0) { showToast('💡 请先勾选要删除的报告'); return; }
+  if (!confirm('⚠️ 确认删除已选中的 '+checked.length+' 份报告？此操作不可恢复。')) return;
+  showToast('🗑️ 正在删除 '+checked.length+' 份...');
+  let done = 0, fail = 0;
+  for (const cb of checked) {
+    const filename = cb.dataset.file;
+    const row = cb.closest('.report-row');
+    if (row) row.classList.add('deleting');
+    try {
+      const resp = await fetch('/api/reports/' + filename, { method: 'DELETE' });
+      const ct = (resp.headers.get('content-type')||'');
+      if (!ct.includes('text/html') && resp.ok) { done++; if (row) row.remove(); }
+      else { fail++; if (row) row.classList.remove('deleting'); }
+    } catch(e) { fail++; if (row) row.classList.remove('deleting'); }
+  }
+  if (done > 0) { showToast('✅ 已删除 '+done+'/'+(done+fail)+' 份'); refreshAll(); }
+  else { showToast('❌ 删除失败，请确认服务器在运行'); }
+}
+
 // ── 一键删除全部报告 ────────────────────────────────────────────────────
 async function deleteAllReports() {
   if (!confirm('⚠️ 确认删除所有分析报告？此操作不可恢复。')) return;
@@ -1434,19 +1217,22 @@ async function deleteAllReports() {
 }
 
 // ── 删除报告 ────────────────────────────────────────────────────────────
-async function deleteReport(filename) {
-  
+async function deleteReport(filename, btnEl) {
+  if (!confirm('确认删除此分析报告？')) return;
+  // 视觉反馈：行淡出
+  let row = btnEl ? btnEl.closest('.report-row') : document.querySelector('[data-file="'+filename+'"]');
+  if (row) row.classList.add('deleting');
   try {
     const resp = await fetch('/api/reports/' + encodeURIComponent(filename), { method: 'DELETE' });
     const ct = (resp.headers.get('content-type')||'');
-    if (ct.includes('text/html')) { showToast('💡 请在本地服务器上操作删除'); return; }
+    if (ct.includes('text/html')) { showToast('💡 请在本地服务器上操作删除'); if(row) row.classList.remove('deleting'); return; }
     if (!resp.ok) throw new Error('HTTP '+resp.status);
     const r = await resp.json();
     if (r.status === 'deleted') {
-      showToast('🗑️ ' + r.message);
-      refreshAll();
+      showToast('🗑️ 已删除');
+      if (row) { row.style.maxHeight = row.offsetHeight+'px'; setTimeout(()=>row.style.maxHeight='0', 50); setTimeout(()=>row.remove(), 400); }
     }
-  } catch(e) { showToast('❌ 删除失败'); }
+  } catch(e) { showToast('❌ 删除失败'); if(row) row.classList.remove('deleting'); }
 }
 
 // Toast 提示
