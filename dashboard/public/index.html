@@ -243,27 +243,36 @@
     .no-data { padding: 24px; text-align: center; color: var(--muted); font-size: 0.9em; }
     .no-data small { font-size: 0.85em; }
 
-    /* 报告列表增强 */
-    .report-row { display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);gap:10px;transition:all 0.3s; }
-    .report-row:hover { background:rgba(79,140,255,0.06); }
-    .report-row.deleting { opacity:0;transform:translateX(20px);pointer-events:none; }
-    .report-check { width:16px;height:16px;cursor:pointer;accent-color:var(--primary);flex-shrink:0; }
-    .report-select-all { font-size:0.7em;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap;display:flex;align-items:center;gap:4px; }
+    /* 报告列表 — 卡片式优化 */
+    .report-toolbar {
+      display:flex;align-items:center;justify-content:space-between;
+      padding:8px 14px;margin-bottom:8px;gap:10px;flex-wrap:wrap;
+      background:var(--surface2);border-radius:10px;font-size:0.82em;
+    }
+    .report-row {
+      display:flex;align-items:center;gap:10px;padding:9px 14px;
+      border-left:3px solid transparent;border-radius:0 8px 8px 0;
+      margin-bottom:2px;background:var(--surface);transition:all 0.25s;
+    }
+    .report-row:hover { background:var(--surface2);border-left-color:var(--primary); }
+    .report-row.deleting { opacity:0;transform:translateX(20px);pointer-events:none;max-height:0;overflow:hidden;margin:0;padding:0 14px; }
+    .report-check { width:15px;height:15px;cursor:pointer;accent-color:var(--primary);flex-shrink:0; }
+    .report-select-all { font-size:0.8em;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap;display:flex;align-items:center;gap:5px; }
     .report-select-all:hover { color:var(--primary); }
-    .report-link { color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;flex:1;min-width:0; }
-    .report-link:hover { color:var(--primary); }
-    .report-link:hover .report-name { color:var(--primary); }
+    .report-link { color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px;flex:1;min-width:0; }
+    .report-link:hover .report-name { color:var(--primary);text-decoration:underline; }
     .report-name { font-weight:600;transition:color 0.15s; }
     .report-icon { font-size:1.1em;flex-shrink:0; }
     .report-info { display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline; }
     .report-del {
       background:none;border:1px solid transparent;color:var(--muted);cursor:pointer;
-      font-size:0.78em;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;flex-shrink:0;
+      font-size:0.9em;padding:3px 8px;border-radius:6px;transition:all 0.2s;flex-shrink:0;
+      opacity:0.35;
     }
-    .report-del:hover { color:#fff;background:rgba(220,38,38,0.7);border-color:rgba(220,38,38,0.5); }
-    .report-del-all { font-size:0.7em;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all 0.2s;white-space:nowrap; }
-    .report-del-all:hover { border-color:rgba(220,38,38,0.5);color:#ef4444;background:rgba(220,38,38,0.1); }
-    .report-toolbar { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap; }
+    .report-row:hover .report-del { opacity:1; }
+    .report-del:hover { color:#fff;background:rgba(220,38,38,0.75);border-color:rgba(220,38,38,0.5); }
+    .report-del-all { font-size:0.72em;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;white-space:nowrap; }
+    .report-del-all:hover { border-color:rgba(220,38,38,0.5);color:#ef4444;background:rgba(220,38,38,0.08); }
     .report-count { font-size:0.75em;color:var(--muted); }
 
     /* 底部 */
@@ -755,33 +764,33 @@ function renderReports(reports) {
     </div>`;
     return;
   }
-  // 工具栏：全选 + 计数 + 批量删除
+  // 工具栏：全选 + 计数 + 批量删除（CDN模式隐藏删除按钮）
+  const delTools = isRemote
+    ? '<span style="font-size:0.72em;color:var(--muted)">📡 在线版 · 只读</span>'
+    : '<div style="display:flex;gap:6px"><button class="report-del-all" onclick="deleteSelectedReports()">🗑️ 删除选中</button><button class="report-del-all" onclick="deleteAllReports()">🗑️ 一键清空</button></div>';
   let toolbar = '<div class="report-toolbar">' +
-    '<label class="report-select-all"><input type="checkbox" class="report-check" onclick="toggleSelectAllReports(this)" title="全选/取消"> 全选</label>' +
-    '<span class="report-count">共 '+reports.length+' 份</span>' +
-    '<div style="display:flex;gap:6px">' +
-      '<button class="report-del-all" onclick="deleteSelectedReports()" title="删除选中报告">🗑️ 删除选中</button>' +
-      '<button class="report-del-all" onclick="deleteAllReports()" title="一键删除全部报告">🗑️ 一键清空</button>' +
-    '</div>' +
+    '<label class="report-select-all"><input type="checkbox" class="report-check" onclick="toggleSelectAllReports(this)" title="全选/取消" ' + (isRemote ? 'style="display:none"' : '') + '> 全选</label>' +
+    '<span class="report-count">📄 '+reports.length+' 份报告</span>' +
+    delTools +
     '</div>';
 
   el.innerHTML = toolbar + reports.map(r => {
     const parts = r.filename.replace('.md','').split('_');
-    const stockName = parts[0] || '';
+    const stockName = parts[0] || '—';
     const stockCode = parts[1] || '';
-    const reportType = parts[2] || '分析';
+    let rawType = parts[2] || '分析';
+    let typeLabel = rawType.includes('deep') ? '📊 深度研报' : rawType.includes('分析') ? '📝 快速分析' : '📄 ' + rawType;
     return `
     <div class="report-row" data-file="${encodeURIComponent(r.filename)}">
-      <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()">
-      <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank" class="report-link" title="在新标签页查看">
-        <span class="report-icon">📄</span>
-        <div class="report-info">
-          <span class="report-name">${stockName}</span>
-          <span style="color:var(--muted);font-size:0.82em">${stockCode}</span>
-          <span style="color:var(--muted);font-size:0.72em">${reportType} · ${r.date}</span>
-        </div>
+      <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()" ${isRemote?'style="display:none"':''}>
+      <span class="report-icon">📄</span>
+      <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank" class="report-link" title="点击查看完整报告">
+        <span class="report-name">${stockName}</span>
+        ${stockCode ? '<span class="sector-tag" style="font-size:0.68em">'+stockCode+'</span>' : ''}
+        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap">${typeLabel}</span>
+        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap;margin-left:auto">${r.date||''}</span>
       </a>
-      <button class="report-del" onclick="deleteReport('${encodeURIComponent(r.filename)}', this)" title="删除此报告">🗑️ 删除</button>
+      ${isRemote ? '' : '<button class="report-del" onclick="deleteReport(\'' + encodeURIComponent(r.filename) + '\', this)" title="删除">🗑️</button>'}
     </div>`;
   }).join('');
 }
@@ -1179,7 +1188,7 @@ function toggleSelectAllReports(btn) {
   document.querySelectorAll('.report-cb').forEach(cb => { cb.checked = btn.checked; });
 }
 async function deleteSelectedReports() {
-  if (isRemote) { showToast('💡 CDN模式下无法删除。请访问 http://你电脑IP:3000 操作'); return; }
+  if (isRemote) { showToast('💡 📡 当前为在线版(CDN)，报告由GitHub托管无法在线删除。💡 本地启动 npm run dashboard 后访问 http://localhost:3000 即可删除'); return; }
   const checked = document.querySelectorAll('.report-cb:checked');
   if (checked.length === 0) { showToast('💡 请先勾选要删除的报告'); return; }
   if (!confirm('⚠️ 确认删除已选中的 '+checked.length+' 份报告？此操作不可恢复。')) return;
@@ -1201,7 +1210,7 @@ async function deleteSelectedReports() {
 
 // ── 一键删除全部报告 ────────────────────────────────────────────────────
 async function deleteAllReports() {
-  if (isRemote) { showToast('💡 CDN模式下无法删除。请访问 http://你电脑IP:3000 操作'); return; }
+  if (isRemote) { showToast('💡 📡 当前为在线版(CDN)，报告由GitHub托管无法在线删除。💡 本地启动 npm run dashboard 后访问 http://localhost:3000 即可删除'); return; }
   if (!confirm('⚠️ 确认删除所有分析报告？此操作不可恢复。')) return;
   showToast('🗑️ 正在批量删除...');
   try {
@@ -1217,7 +1226,7 @@ async function deleteAllReports() {
 
 // ── 删除报告 ────────────────────────────────────────────────────────────
 async function deleteReport(filename, btnEl) {
-  if (isRemote) { showToast('💡 CDN模式下无法删除。请访问 http://你电脑IP:3000 操作'); return; }
+  if (isRemote) { showToast('💡 📡 当前为在线版(CDN)，报告由GitHub托管无法在线删除。💡 本地启动 npm run dashboard 后访问 http://localhost:3000 即可删除'); return; }
   if (!confirm('确认删除此分析报告？')) return;
   // 视觉反馈：行淡出
   let row = btnEl ? btnEl.closest('.report-row') : document.querySelector('[data-file="'+filename+'"]');
