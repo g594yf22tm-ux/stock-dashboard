@@ -1179,6 +1179,7 @@ function toggleSelectAllReports(btn) {
   document.querySelectorAll('.report-cb').forEach(cb => { cb.checked = btn.checked; });
 }
 async function deleteSelectedReports() {
+  if (isRemote) { showToast('💡 CDN模式下无法删除。请访问 http://你电脑IP:3000 操作'); return; }
   const checked = document.querySelectorAll('.report-cb:checked');
   if (checked.length === 0) { showToast('💡 请先勾选要删除的报告'); return; }
   if (!confirm('⚠️ 确认删除已选中的 '+checked.length+' 份报告？此操作不可恢复。')) return;
@@ -1190,9 +1191,8 @@ async function deleteSelectedReports() {
     if (row) row.classList.add('deleting');
     try {
       const resp = await fetch('/api/reports/' + filename, { method: 'DELETE' });
-      const ct = (resp.headers.get('content-type')||'');
-      if (!ct.includes('text/html') && resp.ok) { done++; if (row) row.remove(); }
-      else { fail++; if (row) row.classList.remove('deleting'); }
+      if (resp.ok) { const r = await resp.json(); if (r.status==='deleted') { done++; if (row) row.remove(); continue; } }
+      fail++; if (row) row.classList.remove('deleting');
     } catch(e) { fail++; if (row) row.classList.remove('deleting'); }
   }
   if (done > 0) { showToast('✅ 已删除 '+done+'/'+(done+fail)+' 份'); refreshAll(); }
@@ -1201,12 +1201,11 @@ async function deleteSelectedReports() {
 
 // ── 一键删除全部报告 ────────────────────────────────────────────────────
 async function deleteAllReports() {
+  if (isRemote) { showToast('💡 CDN模式下无法删除。请访问 http://你电脑IP:3000 操作'); return; }
   if (!confirm('⚠️ 确认删除所有分析报告？此操作不可恢复。')) return;
   showToast('🗑️ 正在批量删除...');
   try {
     const resp = await fetch('/api/reports/all', { method: 'DELETE' });
-    const ct = (resp.headers.get('content-type')||'');
-    if (ct.includes('text/html')) { showToast('💡 当前为静态托管模式，请在本地服务器(http://你电脑IP:3000)上操作'); return; }
     if (!resp.ok) throw new Error('HTTP '+resp.status);
     const r = await resp.json();
     if (r.status === 'deleted') {
@@ -1218,14 +1217,13 @@ async function deleteAllReports() {
 
 // ── 删除报告 ────────────────────────────────────────────────────────────
 async function deleteReport(filename, btnEl) {
+  if (isRemote) { showToast('💡 CDN模式下无法删除。请访问 http://你电脑IP:3000 操作'); return; }
   if (!confirm('确认删除此分析报告？')) return;
   // 视觉反馈：行淡出
   let row = btnEl ? btnEl.closest('.report-row') : document.querySelector('[data-file="'+filename+'"]');
   if (row) row.classList.add('deleting');
   try {
     const resp = await fetch('/api/reports/' + encodeURIComponent(filename), { method: 'DELETE' });
-    const ct = (resp.headers.get('content-type')||'');
-    if (ct.includes('text/html')) { showToast('💡 请在本地服务器上操作删除'); if(row) row.classList.remove('deleting'); return; }
     if (!resp.ok) throw new Error('HTTP '+resp.status);
     const r = await resp.json();
     if (r.status === 'deleted') {
