@@ -1046,11 +1046,20 @@ async function showStockDetail(ticker) {
     return;
   }
 
-  // 并行获取行情和新闻
-  const [stock, news] = await Promise.all([
-    get(`/api/stock/${encodeURIComponent(ticker)}`),
-    get(`/api/stock/${encodeURIComponent(ticker)}/news`)
-  ]);
+  // 并行获取行情和新闻 (8秒超时防止永久卡住)
+  let stock, news;
+  try {
+    [stock, news] = await Promise.race([
+      Promise.all([
+        get(`/api/stock/${encodeURIComponent(ticker)}`),
+        get(`/api/stock/${encodeURIComponent(ticker)}/news`)
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+    ]);
+  } catch(e) {
+    panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">网络超时</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">⏱️ 请求超时，请检查服务器是否运行<br><small>npm run dashboard 启动本地服务</small></div>';
+    return;
+  }
 
   if (!stock || stock.error) {
     panel.innerHTML = `
