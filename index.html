@@ -800,6 +800,221 @@ function renderReports(reports) {
   }).join('');
 }
 
+
+
+// ── 全量A股股票库 ───────────────────────────────────────────────────────
+let STOCK_DB = [];
+let _stockDBLoaded = false;
+async function loadStockDB() {
+  if (_stockDBLoaded) return;
+  try {
+    const r = await fetch(CDN + '/stock_list.json', { cache: 'force-cache' });
+    if (r.ok) { const data = await r.json(); STOCK_DB = data; _stockDBLoaded = true; }
+  } catch(e) { console.error('Stock DB:', e.message); }
+}
+const STOCK_FAST = [{c:'600000.SS',n:'浦发银行'},{c:'600009.SS',n:'上海机场'},{c:'600015.SS',n:'华夏银行'},{c:'600016.SS',n:'民生银行'},{c:'600028.SS',n:'中国石化'},{c:'600029.SS',n:'南方航空'},{c:'600030.SS',n:'中信证券'},{c:'600031.SS',n:'三一重工'},{c:'600036.SS',n:'招商银行'},{c:'600048.SS',n:'保利发展'},{c:'600050.SS',n:'中国联通'},{c:'600085.SS',n:'同仁堂'},{c:'600104.SS',n:'上汽集团'},{c:'600111.SS',n:'北方稀土'},{c:'600150.SS',n:'中国船舶'},{c:'600188.SS',n:'兖矿能源'},{c:'600195.SS',n:'中牧股份'},{c:'600196.SS',n:'复星医药'},{c:'600276.SS',n:'恒瑞医药'},{c:'600309.SS',n:'万华化学'},{c:'600406.SS',n:'国电南瑞'},{c:'600436.SS',n:'片仔癀'},{c:'600438.SS',n:'通威股份'},{c:'600519.SS',n:'贵州茅台'},{c:'600547.SS',n:'山东黄金'},{c:'600570.SS',n:'恒生电子'},{c:'600585.SS',n:'海螺水泥'},{c:'600690.SS',n:'海尔智家'},{c:'600809.SS',n:'山西汾酒'},{c:'600837.SS',n:'海通证券'},{c:'600887.SS',n:'伊利股份'},{c:'600900.SS',n:'长江电力'},{c:'600941.SS',n:'中国移动'},{c:'601012.SS',n:'隆基绿能'},{c:'601088.SS',n:'中国神华'},{c:'601111.SS',n:'中国国航'},{c:'601138.SS',n:'工业富联'},{c:'601166.SS',n:'兴业银行'},{c:'601288.SS',n:'农业银行'},{c:'601318.SS',n:'中国平安'},{c:'601398.SS',n:'工商银行'},{c:'601628.SS',n:'中国人寿'},{c:'601633.SS',n:'长城汽车'},{c:'601668.SS',n:'中国建筑'},{c:'601688.SS',n:'华泰证券'},{c:'601728.SS',n:'中国电信'},{c:'601857.SS',n:'中国石油'},{c:'601888.SS',n:'中国中免'},{c:'601899.SS',n:'紫金矿业'},{c:'601919.SS',n:'中远海控'},{c:'601939.SS',n:'建设银行'},{c:'601988.SS',n:'中国银行'},{c:'603259.SS',n:'药明康德'},{c:'603288.SS',n:'海天味业'},{c:'688981.SS',n:'中芯国际'},{c:'000001.SZ',n:'平安银行'},{c:'000002.SZ',n:'万科A'},{c:'000063.SZ',n:'中兴通讯'},{c:'000100.SZ',n:'TCL科技'},{c:'000333.SZ',n:'美的集团'},{c:'000538.SZ',n:'云南白药'},{c:'000568.SZ',n:'泸州老窖'},{c:'000625.SZ',n:'长安汽车'},{c:'000651.SZ',n:'格力电器'},{c:'000725.SZ',n:'京东方A'},{c:'000858.SZ',n:'五粮液'},{c:'000876.SZ',n:'新希望'},{c:'000895.SZ',n:'双汇发展'},{c:'000938.SZ',n:'紫光股份'},{c:'000977.SZ',n:'浪潮信息'},{c:'002007.SZ',n:'华兰生物'},{c:'002027.SZ',n:'分众传媒'},{c:'002049.SZ',n:'紫光国微'},{c:'002142.SZ',n:'宁波银行'},{c:'002195.SZ',n:'岩山科技'},{c:'002230.SZ',n:'科大讯飞'},{c:'002241.SZ',n:'歌尔股份'},{c:'002271.SZ',n:'东方雨虹'},{c:'002304.SZ',n:'洋河股份'},{c:'002352.SZ',n:'顺丰控股'},{c:'002371.SZ',n:'北方华创'},{c:'002415.SZ',n:'海康威视'},{c:'002459.SZ',n:'晶澳科技'},{c:'002460.SZ',n:'赣锋锂业'},{c:'002466.SZ',n:'天齐锂业'},{c:'002475.SZ',n:'立讯精密'},{c:'002594.SZ',n:'比亚迪'},{c:'002714.SZ',n:'牧原股份'},{c:'002736.SZ',n:'国信证券'},{c:'300014.SZ',n:'亿纬锂能'},{c:'300015.SZ',n:'爱尔眼科'},{c:'300033.SZ',n:'同花顺'},{c:'300059.SZ',n:'东方财富'},{c:'300122.SZ',n:'智飞生物'},{c:'300124.SZ',n:'汇川技术'},{c:'300274.SZ',n:'阳光电源'},{c:'300498.SZ',n:'温氏股份'},{c:'300750.SZ',n:'宁德时代'},{c:'300760.SZ',n:'迈瑞医疗'}];
+
+// ── 拼音搜索辅助 ─────────────────────────────────────────────────────────
+function pyMatch(name, q) {
+  if (!name) return false;
+  let py = '';
+  const map = {
+    '中':'z','牧':'m','股':'g','份':'f','贵':'g','州':'z','茅':'m','台':'t','五':'w','粮':'l','液':'y',
+    '招':'z','商':'s','银':'y','行':'h','平':'p','安':'a','浦':'p','发':'f','民':'m','生':'s','兴':'x','业':'y',
+    '华':'h','夏':'x','建':'j','设':'s','工':'g','农':'n','交':'j','通':'t','邮':'y','储':'c',
+    '海':'h','国':'g','泰':'t','君':'j','光':'g','大':'d','申':'s','万':'w','宏':'h','源':'y','东':'d',
+    '方':'f','广':'g','长':'c','江':'j','电':'d','力':'l','三':'s','一':'y','重':'z','工':'g','徐':'x',
+    '上':'s','汽':'q','集':'j','团':'t','北':'b','京':'j','车':'c','比':'b','亚':'y','迪':'d',
+    '宁':'n','德':'d','时':'s','代':'d','阳':'y','光':'g','隆':'l','基':'j','绿':'l','通':'t','威':'w',
+    '药':'y','明':'m','康':'k','恒':'h','瑞':'r','医':'y','复':'f','星':'x','片':'p','仔':'z','癀':'h',
+    '同':'t','仁':'r','堂':'t','白':'b','云':'y','山':'s','尔':'e','眼':'y','科':'k','迈':'m','智':'z',
+    '飞':'f','生':'s','物':'w','春':'c','高':'g','新':'x','兰':'l','莱':'l','士':'s','原':'y','温':'w','氏':'s',
+    '双':'s','汇':'h','金':'j','龙':'l','鱼':'y','天':'t','味':'w','洋':'y','河':'h','泸':'l','老':'l','窖':'j',
+    '古':'g','井':'j','贡':'g','山':'s','西':'x','汾':'f','科':'k','万':'w','保':'b','利':'l','蛇':'s',
+    '筑':'z','铁':'t','核':'h','石':'s','油':'y','化':'h','神':'s','煤':'m','兖':'y','矿':'k',
+    '紫':'z','洛':'l','钼':'m','江':'j','铜':'t','云':'y','铝':'l','南':'n',
+    '宝':'b','钢':'g','鞍':'a','首':'s','包':'b','太':'t','马':'m',
+    '螺':'l','水':'s','泥':'n','冀':'j','年':'n','伊':'y','蒙':'m','牛':'n','明':'m','元':'y','贝':'b','因':'y','美':'m',
+    '分':'f','众':'z','传':'c','媒':'m','芒':'g','果':'g','超':'c','线':'x','谊':'y',
+    '顺':'s','花':'h','财':'c','富':'f','慧':'h','网':'w','络':'l','办':'b','公':'g','讯':'x',
+    '康':'k','威':'w','视':'s','浪':'l','潮':'c','曙':'s','创':'c','微':'w','尔':'e','兆':'z','易':'y',
+    '卓':'z','胜':'s','歌':'g','立':'l','讯':'x','精':'j','密':'m','蓝':'l','思':'s',
+    'T':'t','C':'c','L':'l','深':'s','码':'m','维':'w','诺':'n',
+    '汇':'h','川':'c','先':'x','导':'d','晶':'j','盛':'s','锦':'j','固':'g',
+    '材':'c','料':'l','恩':'e','捷':'j','璞':'p','泰':'t','来':'l','杉':'s','当':'d','升':'s',
+    '容':'r','百':'b','碳':'t','翔':'x','丰':'f','鲁':'l',
+    '力':'l','荣':'r','虹':'h','卫':'w','学':'x','佰':'b','和':'h','成':'c','浙':'z','龙':'l',
+    '阿':'a','胶':'j','应':'y','健':'j','民':'m','九':'j','芝':'z',
+    '润':'r','昆':'k','以':'y','岭':'l','人':'r','寿':'s','保':'b','险':'x',
+    '移':'y','动':'d','联':'l','信':'x','控':'k','圆':'y','韵':'y','达':'d','邦':'b',
+    '航':'h','空':'k','秋':'q','吉':'j','祥':'x','机':'j','场':'c','圳':'z',
+    '免':'m','王':'w','府':'f','百':'b','红':'h','旗':'q','连':'l',
+    '辉':'h','超':'c','市':'s','家':'j','悦':'y','步':'b',
+    '船':'c','舶':'b','发':'f','沈':'s',
+    '能':'n','源':'y','伏':'f','风':'f','储':'c',
+    '牡':'m','丹':'d','大':'d','连':'l','青':'q','岛':'d',
+    '烟':'y','台':'t','日':'r','照':'z','临':'l','沂':'y','德':'d','州':'z',
+    '聊':'l','城':'c','滨':'b','菏':'h','泽':'z','济':'j','宁':'n','泰':'t','安':'a',
+    '莱':'l','芜':'w','淄':'z','博':'b','枣':'z','庄':'z','东':'d','营':'y',
+    '郑':'z','开':'k','封':'f','洛':'l','阳':'y','平':'p','顶':'d','鹤':'h','壁':'b',
+    '新':'x','乡':'x','焦':'j','濮':'p','许':'x','漯':'l','河':'h','门':'m','峡':'x',
+    '商':'s','丘':'q','周':'z','口':'k','驻':'z','马':'m','店':'d','南':'n','信':'x',
+    '武':'w','汉':'h','黄':'h','石':'s','十':'s','堰':'y','宜':'y','昌':'c','襄':'x','樊':'f',
+    '鄂':'e','荆':'j','孝':'x','冈':'g','咸':'x','随':'s','恩':'e','施':'s',
+    '长':'c','沙':'s','株':'z','湘':'x','潭':'t','衡':'h','邵':'s','岳':'y','常':'c','张':'z',
+    '益':'y','郴':'c','永':'y','怀':'h','娄':'l','底':'d',
+    '成':'c','都':'d','自':'z','贡':'g','攀':'p','枝':'z','泸':'l','绵':'m',
+    '遂':'s','内':'n','乐':'l','眉':'m','宜':'y','雅':'y','巴':'b',
+    '资':'z','甘':'g','凉':'l','六':'l','盘':'p','遵':'z','毕':'b',
+    '铜':'t','黔':'q','西':'x','昆':'k','曲':'q','玉':'y','昭':'z','丽':'l',
+    '普':'p','临':'l','楚':'c','文':'w','怒':'n','迪':'d','股':'g'
+  };
+  for (const ch of name) { py += map[ch] || ''; }
+  const ql = q.toLowerCase();
+  return py.startsWith(ql) || py.includes(ql);
+}
+
+// ── 客户端搜索 (CDN模式) ─────────────────────────────────────────────────
+function clientSearch(q) {
+  const seen = new Set();
+  const results = [];
+  const ql = q.toLowerCase();
+  for (const s of [...(_watchlistData||[]), ...(_favData||[])]) {
+    if (seen.has(s.ticker)) continue;
+    const matchCode = s.ticker.toLowerCase().includes(ql) || s.ticker.replace('.SS','').replace('.SZ','').includes(ql);
+    const matchName = (s.name||'').toLowerCase().includes(ql) || (s.name||'').includes(q);
+    const matchPy = pyMatch(s.name, q);
+    if (matchCode || matchName || matchPy) {
+      seen.add(s.ticker);
+      results.push({ ticker:s.ticker, name:s.name, price:s.price, changePercent:s.changePercent, sector:s.sector, exchange:s.ticker.endsWith('.SS')?'沪市':'深市', source:'关注列表' });
+    }
+  }
+  for (const s of (_stockDBLoaded ? STOCK_DB : STOCK_FAST)) {
+    if (seen.has(s.c) || results.length >= 15) break;
+    const matchCode = s.c.toLowerCase().includes(ql) || s.c.replace('.SS','').replace('.SZ','').includes(ql);
+    const matchName = (s.n||'').includes(q) || (s.n||'').toLowerCase().includes(ql);
+    const matchPy2 = pyMatch(s.n, q);
+    if (matchCode || matchName || matchPy2) {
+      seen.add(s.c);
+      const qq = _extQuotes[s.c];
+      results.push({ ticker:s.c, name:s.n, price:qq?qq.p:null, changePercent:qq?qq.c:null, sector:'', exchange:s.c.endsWith('.SS')?'沪市':'深市', source:qq?'实时行情':'股票库' });
+    }
+  }
+  return results.slice(0, 12);
+}
+
+function buildSearchItemHTML(r) {
+  const up = (+(r.changePercent||0)) >= 0;
+  const priceColor = r.price ? (up ? 'var(--up)' : 'var(--down)') : 'var(--muted)';
+  return '<div class="result-item" onclick="selectAndView(\''+r.ticker+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px">'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-weight:600;font-size:0.9em">'+r.name+' <span style="color:var(--muted);font-size:0.75em;font-weight:400">'+r.ticker+'</span></div>'+
+      '<div style="font-size:0.72em;color:var(--muted);margin-top:2px">'+
+        (r.sector?r.sector+' · ':'')+(r.source||'')+' · '+(r.exchange||'')+
+        (r.price ? ' · <b style=color:'+priceColor+'>¥'+r.price.toFixed(2)+'</b>' : ' · ⚡无行情')+
+      '</div>'+
+    '</div>'+
+    '<div style="text-align:right;white-space:nowrap">'+
+      (r.price ? '<div style="font-weight:700;font-size:1em;color:'+priceColor+'">'+(up?'+':'')+(r.changePercent||0).toFixed(2)+'%</div>' : '<div style="color:var(--muted);font-size:0.78em">—</div>')+
+      '<button class="btn" style="font-size:0.7em;padding:2px 8px;margin-top:4px" onclick="event.stopPropagation();addFav(\''+r.ticker+'\',\''+(r.name||'')+'\')">⭐自选</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function doSearchRetry(q) {
+  const box = document.getElementById('searchResults');
+  const results = clientSearch(q);
+  if (results.length) {
+    box.innerHTML = results.map(function(r) { return buildSearchItemHTML(r); }).join('') + '<div class="search-tip">📡 CDN模式 · 实时行情同步中</div>';
+  }
+}
+
+function hideSearch() {
+  document.getElementById('searchResults').classList.remove('show');
+  searchIndex = -1;
+}
+
+function selectAndView(ticker) {
+  hideSearch();
+  document.getElementById('searchInput').value = ticker;
+  document.getElementById('searchInput').blur();
+  showStockDetail(ticker);
+}
+
+// ── 搜索（增强版：键盘导航 + 拼音 + 智能建议）─────────────────────────
+let searchTimer = null;
+let searchIndex = -1;
+
+async function doSearch(q) {
+  const box = document.getElementById('searchResults');
+  if (q.length < 1) { hideSearch(); return; }
+  box.innerHTML = '<div class="loading">🔍 搜索中...</div>';
+  box.classList.add('show');
+
+  if (isRemote) {
+    const results = clientSearch(q);
+    if (!results.length) {
+      const dbHint = _stockDBLoaded ? '' : '<div style="font-size:0.78em;color:var(--info);margin-top:6px">⏳ 正在加载全量A股库(5207只)...</div>';
+      box.innerHTML = '<div class="search-no-results"><div style="font-size:1em;margin-bottom:8px">未找到"<b>'+q+'</b>"</div><div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称 / 拼音首字母 · 5207只A股全覆盖</div>'+dbHint+'</div>';
+      if (!_stockDBLoaded) { loadStockDB().then(function(){ var qq=document.getElementById('searchInput').value.trim(); if(qq===q){ doSearchRetry(q); } }); }
+      return;
+    }
+    box.innerHTML = results.map(function(r) { return buildSearchItemHTML(r); }).join('');
+    box.innerHTML += '<div class="search-tip">📡 CDN模式 · '+Object.keys(_extQuotes).length+'只有实时行情</div>';
+    return;
+  }
+
+  const data = await get(API.search(q));
+  if (!data || !data.results?.length) {
+    box.innerHTML = '<div class="search-no-results"><div style="font-size:1em;margin-bottom:8px">未找到"<b>'+q+'</b>"相关A股</div><div style="margin-top:8px;font-size:0.75em;color:var(--muted)">支持：代码 / 名称 / 拼音首字母</div></div>';
+    return;
+  }
+  box.innerHTML = data.results.map(function(r, i) {
+    return '<div class="result-item" data-index="'+i+'" onclick="selectAndView(\''+r.ticker+'\')" onmouseenter="searchIndex='+i+';updateSearchHighlight(document.querySelectorAll(\'.search-results .result-item\'))">'+
+      '<div class="stock-info">'+
+        '<span class="stock-name">'+r.name+' · '+r.ticker+' '+(_favTickers.has(r.ticker) ? '<span style=\"color:var(--accent);font-size:0.8em\">⭐已加</span>' : '')+'</span>'+
+        '<span class="stock-code">'+(r.sector||'')+' '+(r.exchange||'')+' · '+(r.source||'')+'</span>'+
+      '</div>'+
+      '<div class="stock-price">'+
+        '<div class="p">'+(r.price ? '¥'+F.price(r.price) : '—')+'</div>'+
+        '<div class="c '+F.dir(r.changePercent)+'">'+F.pct(r.changePercent)+'</div>'+
+        '<button class="btn" style="font-size:0.7em;padding:3px 6px" onclick="event.stopPropagation();addFav(\''+r.ticker+'\',\''+r.name+'\')">⭐自选</button>'+
+        '<button class="btn btn-accent" style="font-size:0.7em;padding:3px 6px" onclick="event.stopPropagation();quickAnalyze(\''+r.ticker+'\')">📝分析</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  if (data.hasMore) box.innerHTML += '<div class="search-tip">还有更多结果，请细化搜索关键字</div>';
+  else box.innerHTML += '<div class="search-tip">🖱️ 点击选择 · ⌨️ ↑↓导航 · ↵查看详情 · '+data.count+'条结果</div>';
+}
+
+// 搜索框事件
+document.getElementById('searchInput').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  var q = this.value.trim();
+  searchIndex = -1;
+  document.getElementById('searchClear').classList.toggle('show', q.length > 0);
+  if (q.length < 1) { hideSearch(); return; }
+  searchTimer = setTimeout(function() { loadStockDB(); doSearch(q); }, 250);
+});
+
+document.getElementById('searchInput').addEventListener('focus', function() {
+  if (this.value.trim().length >= 1) doSearch(this.value.trim());
+});
+
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  var items = document.querySelectorAll('.search-results .result-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); searchIndex = Math.min(searchIndex + 1, items.length - 1); updateSearchHighlight(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); searchIndex = Math.max(searchIndex - 1, 0); updateSearchHighlight(items); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (searchIndex >= 0 && items[searchIndex]) { items[searchIndex].click(); }
+    else { var q2 = this.value.trim(); if (q2.length >= 2) { hideSearch(); var ticker = q2; if (/^\d{6}$/.test(q2)) ticker = q2.startsWith('6') ? q2 + '.SS' : q2 + '.SZ'; showStockDetail(ticker); } }
+  }
+  else if (e.key === 'Escape') { hideSearch(); }
+});
+
+document.addEventListener('click', function(e) { if (!e.target.closest('.search-wrapper')) hideSearch(); });
+
 // ── 股票详情弹窗 ─────────────────────────────────────────────────────────
 async function showStockDetail(ticker) {
   const overlay = document.getElementById('detailOverlay');
@@ -831,11 +1046,20 @@ async function showStockDetail(ticker) {
     return;
   }
 
-  // 并行获取行情和新闻
-  const [stock, news] = await Promise.all([
-    get(`/api/stock/${encodeURIComponent(ticker)}`),
-    get(`/api/stock/${encodeURIComponent(ticker)}/news`)
-  ]);
+  // 并行获取行情和新闻 (8秒超时防止永久卡住)
+  let stock, news;
+  try {
+    [stock, news] = await Promise.race([
+      Promise.all([
+        get(`/api/stock/${encodeURIComponent(ticker)}`),
+        get(`/api/stock/${encodeURIComponent(ticker)}/news`)
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+    ]);
+  } catch(e) {
+    panel.innerHTML = '<div class="detail-header"><div><div class="dh-name">网络超时</div><div class="dh-code">'+ticker+'</div></div><button class="detail-close" onclick="closeDetail()">✕</button></div><div class="detail-loading">⏱️ 请求超时，请检查服务器是否运行<br><small>npm run dashboard 启动本地服务</small></div>';
+    return;
+  }
 
   if (!stock || stock.error) {
     panel.innerHTML = `
