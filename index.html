@@ -505,7 +505,7 @@ const API = {
 };
 
 // 远程模式的静态报告列表
-const EMBEDDED_REPORTS = [{filename:'600036_招商银行_deep_dive_2026-05-31.md',title:'招商银行 deep dive',date:'2026-05-31'},{filename:'600900_长江电力_deep_dive_2026-05-31.md',title:'长江电力 deep dive',date:'2026-05-31'},{filename:'600887_伊利股份_deep_dive_2026-05-31.md',title:'伊利股份 deep dive',date:'2026-05-31'},{filename:'601899_紫金矿业_deep_dive_2026-05-31.md',title:'紫金矿业 deep dive',date:'2026-05-31'},{filename:'002027_分众传媒_deep_dive_2026-05-31.md',title:'分众传媒 deep dive',date:'2026-05-31'}];
+const EMBEDDED_REPORTS = [{"filename":"600036_招商银行_deep_dive_2026-06-03.md","title":"招商银行 深度研报","date":"2026-06-03"},{"filename":"600900_长江电力_deep_dive_2026-05-31.md","title":"长江电力 深度研报","date":"2026-05-31"},{"filename":"600887_伊利股份_deep_dive_2026-06-03.md","title":"伊利股份 深度研报","date":"2026-06-03"},{"filename":"601899_紫金矿业_deep_dive_2026-06-03.md","title":"紫金矿业 深度研报","date":"2026-06-03"},{"filename":"002027_分众传媒_deep_dive_2026-06-03.md","title":"分众传媒 深度研报","date":"2026-06-03"},{"filename":"300015_爱尔眼科_deep_dive_2026-06-03.md","title":"爱尔眼科 深度研报","date":"2026-06-03"},{"filename":"600031_三一重工_deep_dive_2026-06-03.md","title":"三一重工 深度研报","date":"2026-06-03"},{"filename":"600585_海螺水泥_deep_dive_2026-06-03.md","title":"海螺水泥 深度研报","date":"2026-06-03"},{"filename":"600030_中信证券_deep_dive_2026-06-03.md","title":"中信证券 深度研报","date":"2026-06-03"},{"filename":"600438_通威股份_deep_dive_2026-06-03.md","title":"通威股份 深度研报","date":"2026-06-03"}];
 
 // ── 排序状态 ─────────────────────────────────────────────────────────────
 let sortState = { col: null, asc: false };
@@ -546,7 +546,7 @@ async function get(url) {
         // 转换数据格式兼容现有渲染
         if (url===API.watchlistLive) return { stocks: data.stocks||[], trending: [], source: 'CDN', timestamp: data.timestamp };
         if (url===API.watchlist) return data;
-        if (url===API.analysis) return { recommendations: (data.analyses||[]).map(a=>({ticker:a.ticker,name:a.name,fundamentalView:a.fundamental?.view||'',technicalView:a.technical?.view||'',riskView:(a.risks||[]).join('；'),recommendation:a.recommendation?.signal||'HOLD',scores:{fundamental:(a.fundamental?.signalStrength||0.5)*10,technical:(a.technical?.signalStrength||0.5)*10,risk:(a.insider?.signalStrength||0.5)*10}}))};
+        if (url===API.analysis) return { recommendations: (data.analyses||[]).map(a=>({ticker:a.ticker,name:a.name,fundamentalView:a.fundamental?.view||'',technicalView:a.technical?.view||'',riskView:(a.risks||[]).join('；'),recommendation:a.recommendation?.signal||'HOLD',scores:{fundamental:(a.fundamental?.signalStrength||(a.technical?.signalStrength||0.5))*9,technical:(a.technical?.signalStrength||0.5)*10,risk:((a.technical?.signalStrength||0.5)*9)}}))};
         return data; // market.json as-is
       }
       return null;
@@ -670,7 +670,7 @@ function applySortAndRender() {
 
   const tbody = document.getElementById('watchlistBody');
   tbody.innerHTML = data.map(s => {
-    const rating = s.expertRating || 3;
+    const rating = s.expertRating || (s.signal ? Math.round(s.signal.score/20) : 3);
     const sigType = (s.recommendation?.signal || s.signal?.type || '').toUpperCase();
     const sigMap = { BUY:'买入', HOLD:'持有', WATCH:'关注', SELL:'卖出' };
     const sigText = sigMap[sigType] || s.signal?.text || '—';
@@ -684,7 +684,7 @@ function applySortAndRender() {
       <td class="${up?'up':'down'}">${(+s.change)>0?'+':''}${F.price(s.change)}</td>
       <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
       <td>${F.vol(s.volume)}</td>
-      <td>${s.amount ? (s.amount/10000).toFixed(2)+'亿' : '—'}</td>
+      <td>${s.amount ? (s.amount/1e8).toFixed(2)+'亿' : '—'}</td>
       <td style="color:${peColor}">${s.pe ? (+s.pe).toFixed(1) : '—'}</td>
       <td>${s.targetPrice ? '¥'+s.targetPrice : '—'}</td>
       <td><span class="star">${F.stars(rating)}</span></td>
@@ -716,12 +716,27 @@ function renderAnalysis(recommendations) {
     return sb - sa;
   });
 
+  // 注入信号评分（从watchlist交叉引用）
+  for (var _i = 0; _i < sorted.length; _i++) {
+    var _r = sorted[_i];
+    if (_r._signalScore == null) {
+      var _w2 = _watchlistData && _watchlistData.find(function(x){return x.ticker===_r.ticker;});
+      if (_w2 && _w2.signal) { _r._signalScore = _w2.signal.score; }
+      else { _r._signalScore = (_r.recommendation?.confidence || 0.5) * 100; }
+    }
+  }
   el.innerHTML = sorted.slice(0, 12).map(r => {
     const sig = (r.recommendation?.signal || '').toUpperCase();
     const sigCls = sig === 'BUY' ? 'buy' : sig === 'SELL' ? 'watch' : sig === 'WATCH' ? 'watch' : 'hold';
     const sigMap = { BUY:'买入', HOLD:'持有', WATCH:'关注', SELL:'卖出' };
     const scoreColor = v => (+v) >= 8 ? 'var(--up)' : (+v) >= 6 ? 'var(--accent)' : (+v) >= 4 ? 'var(--info)' : 'var(--muted)';
-    const confPct = ((r.recommendation?.confidence || 0.5) * 100).toFixed(0);
+    const _sigScore = (function(){
+    var w = _watchlistData && _watchlistData.find(function(x){return x.ticker===r.ticker;});
+    if (w && w.signal && w.signal.score) return w.signal.score;
+    if (r._signalScore) return r._signalScore;
+    return (r.recommendation?.confidence || 0.5) * 100;
+  })();
+  const confPct = _sigScore.toFixed(0);
     return `
     <div class="analysis-card ${sigCls}">
       <div class="sname" style="cursor:pointer" onclick="showStockDetail('${r.ticker}')">
@@ -1094,7 +1109,7 @@ async function showStockDetail(ticker) {
       <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up)">¥${F.price(stock.high)}</div></div>
       <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down)">¥${F.price(stock.low)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交量</div><div class="dm-value">${F.vol(stock.volume)}</div></div>
-      <div class="detail-metric"><div class="dm-label">成交额</div><div class="dm-value">${(stock.amount/10000).toFixed(2)}亿</div></div>
+      <div class="detail-metric"><div class="dm-label">成交额</div><div class="dm-value">${(stock.amount/1e8).toFixed(2)}亿</div></div>
       ${stock.pe ? `<div class="detail-metric"><div class="dm-label">市盈率</div><div class="dm-value">${(+stock.pe).toFixed(1)}</div></div>` : ''}
       ${stock.marketCap ? `<div class="detail-metric"><div class="dm-label">总市值</div><div class="dm-value">${(stock.marketCap/1e8).toFixed(0)}亿</div></div>` : ''}
       ${stock.targetPrice ? `<div class="detail-metric"><div class="dm-label">目标价</div><div class="dm-value">¥${stock.targetPrice}</div></div>` : ''}
@@ -1246,7 +1261,7 @@ function showStockDetailCDN(s) {
       <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up)">¥${F.price(s.high)}</div></div>
       <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down)">¥${F.price(s.low)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交量</div><div class="dm-value">${F.vol(s.volume)}</div></div>
-      <div class="detail-metric"><div class="dm-label">成交额</div><div class="dm-value">${s.amount ? (s.amount/10000).toFixed(2)+'亿' : '—'}</div></div>
+      <div class="detail-metric"><div class="dm-label">成交额</div><div class="dm-value">${s.amount ? (s.amount/1e8).toFixed(2)+'亿' : '—'}</div></div>
     </div>
     <div class="detail-section">
       <div class="ds-title">🎯 当日技术信号</div>
@@ -1355,7 +1370,7 @@ async function loadFavorites() {
         <td class="${up?'up':'down'}">${change != null ? (change>0?'+':'')+(+change).toFixed(2) : '—'}</td>
         <td class="${up?'up':'down'}">${F.pct(changePercent)}</td>
         <td>${F.vol(volume)}</td>
-        <td>${amount ? (amount/10000).toFixed(2)+'亿' : '—'}</td>
+        <td>${amount ? (amount/1e8).toFixed(2)+'亿' : '—'}</td>
         <td>${changePercent!=null?'<span class="badge" style="font-size:0.78em;background:'+sigBg2+';color:'+sigColor2+';border:1px solid '+sigBdr2+'">'+sigText2+' · '+sigScore2+'分</span>':'—'}</td>
         <td><button class="btn" style="font-size:0.7em;padding:2px 8px;color:var(--down)" onclick="event.stopPropagation();removeFav('${s.ticker}')">✕ 移除</button></td>
       </tr>`;

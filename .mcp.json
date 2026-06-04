@@ -1,0 +1,47 @@
+{
+  "mcpServers": {
+    "yfinance": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "yfinance-mcp-ts"],
+      "env": {},
+      "description": "Yahoo Finance — 美股行情、基本面、期权（A股支持有限）"
+    },
+    "fmp": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@houtini/fmp-mcp"],
+      "env": {
+        "FMP_API_KEY": "${FMP_API_KEY}"
+      },
+      "description": "Financial Modeling Prep — 支持美股+A股财报数据（250次/天免费，需注册）"
+    }
+  },
+
+  "_a_share_recommended": {
+    "_comment": "推荐：以下 MCP 对 A股 有更好的支持，按需启用",
+    "stockdata": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "stockdata-mcp"],
+      "env": {},
+      "description": "东方财富 MCP — A股/港股实时行情、龙虎榜、资金流向、板块轮动（推荐！）"
+    },
+    "tushare": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "tushare-mcp"],
+      "env": {
+        "TUSHARE_TOKEN": "${TUSHARE_TOKEN}"
+      },
+      "description": "Tushare MCP — A股财务数据、大宗交易、融资融券（需免费注册获取Token）"
+    },
+    "openinsider": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "openinsider-mcp"],
+      "env": {},
+      "description": "⚠️ 仅美股：内部交易/SEC文件/空头数据 — 对A股无效，美股分析时启用"
+    }
+  }
+}

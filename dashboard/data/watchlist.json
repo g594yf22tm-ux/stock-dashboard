@@ -1,0 +1,231 @@
+{
+  "timestamp": "2026-06-01T15:32:35.844Z",
+  "source": "新浪财经 (GitHub Actions)",
+  "stocks": [
+    {
+      "ticker": "002027.SZ",
+      "name": "分众传媒",
+      "price": 5.68,
+      "change": 0.09999999999999964,
+      "changePercent": 1.7921146953404954,
+      "open": 5.55,
+      "high": 5.7,
+      "low": 5.54,
+      "volume": 157100021,
+      "amount": 887792921.18,
+      "prevClose": 5.58,
+      "sector": "📺 传媒·广告",
+      "targetPrice": 8,
+      "reason": "¥5.58, 1手¥558。梯媒绝对龙头，经济复苏广告需求弹性大，股息率4%+",
+      "signal": {
+        "score": 73,
+        "text": "强势看多",
+        "signal": "BUY"
+      },
+      "time": "15:00:00"
+    },
+    {
+      "ticker": "600438.SS",
+      "name": "通威股份",
+      "price": 14.53,
+      "change": -0.2400000000000002,
+      "changePercent": -1.6249153689911997,
+      "open": 14.6,
+      "high": 14.88,
+      "low": 14.5,
+      "volume": 40342011,
+      "amount": 592116462,
+      "prevClose": 14.77,
+      "sector": "☀️ 新能源·硅料",
+      "targetPrice": 20,
+      "reason": "¥14.77, 1手¥1477。硅料+电池双龙头，成本行业最低，行业出清后集中度提升受益最大",
+      "signal": {
+        "score": 27,
+        "text": "弱势回避",
+        "signal": "WATCH"
+      },
+      "time": "15:00:03"
+    },
+    {
+      "ticker": "600030.SS",
+      "name": "中信证券",
+      "price": 25.67,
+      "change": -0.379999999999999,
+      "changePercent": -1.4587332053742763,
+      "open": 26.01,
+      "high": 26.31,
+      "low": 25.53,
+      "volume": 221410020,
+      "amount": 5715779763,
+      "prevClose": 26.05,
+      "sector": "📊 券商·弹性",
+      "targetPrice": 30,
+      "reason": "¥26.05, 1手¥2605。券商龙头，牛市高弹性，PB历史低位，成交活跃时爆发力强",
+      "signal": {
+        "score": 27,
+        "text": "弱势回避",
+        "signal": "WATCH"
+      },
+      "time": "15:00:03"
+    },
+    {
+      "ticker": "300015.SZ",
+      "name": "爱尔眼科",
+      "price": 9.2,
+      "change": 0.08000000000000007,
+      "changePercent": 0.8771929824561412,
+      "open": 9.12,
+      "high": 9.22,
+      "low": 8.97,
+      "volume": 73522021,
+      "amount": 671284184.93,
+      "prevClose": 9.12,
+      "sector": "🏥 医药·眼科",
+      "targetPrice": 14,
+      "reason": "¥9.12, 1手¥912。眼科连锁龙头，老龄化+近视率双驱动，模式可复制性极强",
+      "signal": {
+        "score": 65,
+        "text": "偏多",
+        "signal": "BUY"
+      },
+      "time": "16:25:30"
+    },
+    {
+      "ticker": "601899.SS",
+      "name": "紫金矿业",
+      "price": 30.19,
+      "change": -0.25,
+      "changePercent": -0.821287779237845,
+      "open": 30.22,
+      "high": 30.7,
+      "low": 30.12,
+      "volume": 175162167,
+      "amount": 5318626880,
+      "prevClose": 30.44,
+      "sector": "🪙 有色·通胀对冲",
+      "targetPrice": 36,
+      "reason": "¥30.44, 1手¥3044。全球铜金矿巨头，新能源金属+央行购金双驱动，海外产能释放",
+      "signal": {
+        "score": 35,
+        "text": "偏弱关注",
+        "signal": "WATCH"
+      },
+      "time": "15:00:01"
+    },
+    {
+      "ticker": "600585.SS",
+      "name": "海螺水泥",
+      "price": 20.31,
+      "change": 0.16000000000000014,
+      "changePercent": 0.7940446650124077,
+      "open": 20.03,
+      "high": 20.33,
+      "low": 19.9,
+      "volume": 32831670,
+      "amount": 660660090,
+      "prevClose": 20.15,
+      "sector": "🏗️ 建材·水泥",
+      "targetPrice": 26,
+      "reason": "¥20.15, 1手¥2015。水泥龙头成本优势突出，高分红+低估值，基建稳增长受益",
+      "signal": {
+        "score": 65,
+        "text": "偏多",
+        "signal": "BUY"
+      },
+      "time": "15:00:00"
+    },
+    {
+      "ticker": "600031.SS",
+      "name": "三一重工",
+      "price": 18.07,
+      "change": 0.129999999999999,
+      "changePercent": 0.7246376811594146,
+      "open": 17.91,
+      "high": 18.23,
+      "low": 17.38,
+      "volume": 131284017,
+      "amount": 2341229119,
+      "prevClose": 17.94,
+      "sector": "🔧 机械·周期",
+      "targetPrice": 22,
+      "reason": "¥17.94, 1手¥1794。海外收入60%+，设备更新周期+基建回暖，周期底部布局",
+      "signal": {
+        "score": 65,
+        "text": "偏多",
+        "signal": "BUY"
+      },
+      "time": "15:00:03"
+    },
+    {
+      "ticker": "600036.SS",
+      "name": "招商银行",
+      "price": 38.2,
+      "change": 0.19000000000000483,
+      "changePercent": 0.49986845566957333,
+      "open": 38,
+      "high": 38.2,
+      "low": 37.8,
+      "volume": 96137886,
+      "amount": 3656722114,
+      "prevClose": 38.01,
+      "sector": "🏦 银行·龙头",
+      "targetPrice": 42,
+      "reason": "¥38.01, 1手¥3801。零售银行之王，ROE行业最高，股息率5%+，防御配置首选",
+      "signal": {
+        "score": 65,
+        "text": "偏多",
+        "signal": "BUY"
+      },
+      "time": "15:00:01"
+    },
+    {
+      "ticker": "600887.SS",
+      "name": "伊利股份",
+      "price": 27,
+      "change": 0.0799999999999983,
+      "changePercent": 0.29717682020801744,
+      "open": 26.7,
+      "high": 27.03,
+      "low": 26.58,
+      "volume": 68461666,
+      "amount": 1839883296,
+      "prevClose": 26.92,
+      "sector": "🥛 消费·乳业",
+      "targetPrice": 32,
+      "reason": "¥26.92, 1手¥2692。乳业绝对龙头，品牌+渠道壁垒深厚，股息率3%+消费防御",
+      "signal": {
+        "score": 65,
+        "text": "偏多",
+        "signal": "BUY"
+      },
+      "time": "15:00:01"
+    },
+    {
+      "ticker": "600900.SS",
+      "name": "长江电力",
+      "price": 27.77,
+      "change": 0.019999999999999574,
+      "changePercent": 0.07207207207207053,
+      "open": 27.74,
+      "high": 27.87,
+      "low": 27.55,
+      "volume": 139278066,
+      "amount": 3861503134,
+      "prevClose": 27.75,
+      "sector": "⚡ 电力·高股息",
+      "targetPrice": 32,
+      "reason": "¥27.75, 1手¥2775。水电龙头现金流稳定，股息率3.5%+，类债券防御资产",
+      "signal": {
+        "score": 55,
+        "text": "震荡观望",
+        "signal": "HOLD"
+      },
+      "time": "15:00:01"
+    }
+  ],
+  "marketStatus": {
+    "open": false,
+    "text": "已收盘"
+  },
+  "liveCount": 10
+}

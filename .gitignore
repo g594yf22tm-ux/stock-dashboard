@@ -1,0 +1,43 @@
+# Claude Code 本地覆盖（API Key、个人偏好）
+.claude/settings.local.json
+CLAUDE.local.md
+
+# 依赖
+node_modules/
+
+# 环境变量和密钥
+.env
+.env.local
+*.pem
+*.key
+credentials.json
+dashboard/.env
+
+# 截图（临时文件）
+screenshots/*
+!screenshots/.gitkeep
+
+# OCR 语言包（tesseract 自动下载）
+*.traineddata
+
+# 仪表盘缓存（提交到Git供CDN使用）
+dashboard/data/reports.json
+
+# 输出文件
+reports/*.pdf
+data/*.csv
+
+# 操作系统
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 日志
+*.log
+.claude/logs/

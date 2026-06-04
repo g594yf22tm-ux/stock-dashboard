@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: stock-dashboard
+    env: node
+    buildCommand: npm install && node scripts/init-dashboard-data.js
+    startCommand: node dashboard/server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production

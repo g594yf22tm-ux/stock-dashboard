@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Grep",
+      "Glob",
+      "WebSearch",
+      "WebFetch",
+      "Skill",
+      "Task",
+      "TodoWrite",
+      "Bash",
+      "mcp__yfinance__*",
+      "mcp__openinsider__*",
+      "mcp__fmp__*",
+      "mcp__feishu__*"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ],
+    "additionalDirectories": [
+      "f:/Claude code test/reports",
+      "f:/Claude code test/data",
+      "f:/Claude code test/analysis",
+      "f:/Claude code test/portfolio",
+      "f:/Claude code test/scripts",
+      "f:/Claude code test/screenshots",
+      "f:/Claude code test/dashboard"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "model": "sonnet",
+  "alwaysThinkingEnabled": true
+}
