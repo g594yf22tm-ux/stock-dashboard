@@ -21,11 +21,8 @@ on:
     - cron: '0 */2 * * *'
   workflow_dispatch:  # 手动触发
 
-# 权限设置（GitHub Pages 部署需要）
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   update-and-deploy:
@@ -45,37 +42,20 @@ jobs:
       - name: 🚀 抓取A股实时行情（新浪财经）
         run: node scripts/fetch-sina-data.js
 
-      - name: 📄 复制仪表盘文件到部署目录
+      - name: 📄 同步仪表盘文件到根目录（GitHub Pages 直接从分支根目录部署）
         run: |
-          mkdir -p _site/reports _site/dashboard/data
-          # 主仪表盘
-          cp dashboard/public/index.html _site/index.html
-          # 报告查看器
-          cp dashboard/public/report.html _site/report.html
-          # 轻量版仪表盘
-          cp dashboard/public/standalone.html _site/standalone.html
-          # 数据文件
-          cp -r dashboard/data/*.json _site/dashboard/data/ 2>/dev/null || true
-          cp -r reports/*.md _site/reports/ 2>/dev/null || true
-          # 重定向
-          echo '<html><head><meta http-equiv="refresh" content="0;url=./index.html"></head><body>Redirecting...</body></html>' > _site/redirect.html
+          cp dashboard/public/index.html index.html
+          cp dashboard/public/report.html report.html
+          cp dashboard/public/standalone.html standalone.html
 
-      - name: 📊 提交数据更新
+      - name: 📊 提交并推送所有更新
         run: |
           git config user.name "A股行情机器人"
           git config user.email "stock-bot@github.com"
-          git add dashboard/data/
-          git diff --staged --quiet || git commit -m "📊 A股行情数据更新 $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')"
-          git push
-
-      - name: 🔧 设置 GitHub Pages
-        uses: actions/configure-pages@v4
-
-      - name: 📤 上传 Pages 文件
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '_site'
-
-      - name: 🌐 部署到 GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          git add dashboard/data/ index.html report.html standalone.html
+          if git diff --staged --quiet; then
+            echo "没有变更，跳过提交"
+          else
+            git commit -m "📊 行情数据 + 仪表盘同步更新 $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')"
+            git push
+          fi
