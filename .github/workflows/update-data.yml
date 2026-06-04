@@ -6,6 +6,8 @@ on:
     paths:
       - 'dashboard/public/**'
       - 'dashboard/data/**'
+      - 'scripts/**'
+      - 'reports/**'
       - 'index.html'
       - 'report.html'
       - 'standalone.html'
