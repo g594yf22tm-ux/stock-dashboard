@@ -515,7 +515,7 @@ const isRemote = (function(){
   if (host.startsWith('192.168.')||host.startsWith('10.')||host.startsWith('172.')) return false;
   return true;
 })();
-const CDN = 'https://cdn.jsdelivr.net/gh/g594yf22tm-ux/stock-dashboard@master/dashboard/data';
+const CDN = './dashboard/data'; // 同源加载，绕过 jsDelivr 7天缓存
 
 // ── 预加载扩展行情（确保首次搜索就有实时价格）───────────────────────────
 let _extQuotes = {};
