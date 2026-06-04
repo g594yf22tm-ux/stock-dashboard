@@ -1,139 +1,139 @@
 {
-  "timestamp": "2026-06-01T15:32:35.843Z",
+  "timestamp": "2026-06-04T16:11:47.486Z",
   "source": "新浪财经",
   "indices": {
     "000001.SS": {
       "ticker": "000001.SS",
       "name": "上证指数",
-      "price": 4057.74,
-      "change": -10.82910000000038,
-      "changePercent": -0.266164829300807,
-      "volume": 676025806
+      "price": 4057.7811,
+      "change": -26.19290000000001,
+      "changePercent": -0.6413581477257203,
+      "volume": 621194774
     },
     "399001.SZ": {
       "ticker": "399001.SZ",
       "name": "深证成指",
-      "price": 15340.356,
-      "change": -234.77800000000025,
-      "changePercent": -1.507389920369226,
-      "volume": 76039303257
+      "price": 15661.574,
+      "change": -43.13699999999881,
+      "changePercent": -0.27467554162568675,
+      "volume": 71893942096
     },
     "399006.SZ": {
       "ticker": "399006.SZ",
       "name": "创业板指",
-      "price": 3950.943,
-      "change": -87.00799999999981,
-      "changePercent": -2.1547562117519456,
-      "volume": 21079880879
+      "price": 4088.884,
+      "change": -34.103000000000065,
+      "changePercent": -0.8271430397427899,
+      "volume": 20272486985
     }
   },
   "sectors": [
     {
-      "name": "传媒·广告",
-      "changePercent": 1.79
-    },
-    {
-      "name": "医药·眼科",
-      "changePercent": 0.88
-    },
-    {
-      "name": "建材·水泥",
-      "changePercent": 0.79
-    },
-    {
       "name": "机械·周期",
-      "changePercent": 0.72
-    },
-    {
-      "name": "银行·龙头",
-      "changePercent": 0.5
-    },
-    {
-      "name": "消费·乳业",
-      "changePercent": 0.3
-    },
-    {
-      "name": "电力·高股息",
-      "changePercent": 0.07
-    },
-    {
-      "name": "有色·通胀对冲",
-      "changePercent": -0.82
+      "changePercent": 1
     },
     {
       "name": "券商·弹性",
-      "changePercent": -1.46
+      "changePercent": -0.04
+    },
+    {
+      "name": "消费·乳业",
+      "changePercent": -0.6
+    },
+    {
+      "name": "电力·高股息",
+      "changePercent": -0.61
     },
     {
       "name": "新能源·硅料",
-      "changePercent": -1.62
+      "changePercent": -0.64
+    },
+    {
+      "name": "银行·龙头",
+      "changePercent": -1.04
+    },
+    {
+      "name": "传媒·广告",
+      "changePercent": -1.09
+    },
+    {
+      "name": "建材·水泥",
+      "changePercent": -1.89
+    },
+    {
+      "name": "有色·通胀对冲",
+      "changePercent": -2.97
+    },
+    {
+      "name": "医药·眼科",
+      "changePercent": -3.41
     }
   ],
   "trending": [
     {
-      "ticker": "600030.SS",
-      "name": "中信证券",
-      "price": 25.67,
-      "changePercent": -1.4587332053742763,
-      "volume": 221410020
-    },
-    {
       "ticker": "601899.SS",
       "name": "紫金矿业",
-      "price": 30.19,
-      "changePercent": -0.821287779237845,
-      "volume": 175162167
+      "price": 30.34,
+      "changePercent": -2.9740965781899575,
+      "volume": 206216550
     },
     {
-      "ticker": "002027.SZ",
-      "name": "分众传媒",
-      "price": 5.68,
-      "changePercent": 1.7921146953404954,
-      "volume": 157100021
-    },
-    {
-      "ticker": "600900.SS",
-      "name": "长江电力",
-      "price": 27.77,
-      "changePercent": 0.07207207207207053,
-      "volume": 139278066
-    },
-    {
-      "ticker": "600031.SS",
-      "name": "三一重工",
-      "price": 18.07,
-      "changePercent": 0.7246376811594146,
-      "volume": 131284017
-    },
-    {
-      "ticker": "600036.SS",
-      "name": "招商银行",
-      "price": 38.2,
-      "changePercent": 0.49986845566957333,
-      "volume": 96137886
+      "ticker": "600030.SS",
+      "name": "中信证券",
+      "price": 25.59,
+      "changePercent": -0.039062500000006106,
+      "volume": 129374977
     },
     {
       "ticker": "300015.SZ",
       "name": "爱尔眼科",
-      "price": 9.2,
-      "changePercent": 0.8771929824561412,
-      "volume": 73522021
+      "price": 8.5,
+      "changePercent": -3.409090909090917,
+      "volume": 111211798
+    },
+    {
+      "ticker": "600031.SS",
+      "name": "三一重工",
+      "price": 18.14,
+      "changePercent": 1.0022271714922033,
+      "volume": 93987276
+    },
+    {
+      "ticker": "002027.SZ",
+      "name": "分众传媒",
+      "price": 5.44,
+      "changePercent": -1.090909090909084,
+      "volume": 90254751
+    },
+    {
+      "ticker": "600900.SS",
+      "name": "长江电力",
+      "price": 27.72,
+      "changePercent": -0.6095374686267541,
+      "volume": 87497229
+    },
+    {
+      "ticker": "600036.SS",
+      "name": "招商银行",
+      "price": 38.1,
+      "changePercent": -1.0389610389610353,
+      "volume": 73884128
     },
     {
       "ticker": "600887.SS",
       "name": "伊利股份",
-      "price": 27,
-      "changePercent": 0.29717682020801744,
-      "volume": 68461666
+      "price": 26.56,
+      "changePercent": -0.5988023952095813,
+      "volume": 47475637
     }
   ],
   "marketBreadth": {
-    "advancers": 7,
-    "decliners": 3,
+    "advancers": 1,
+    "decliners": 9,
     "unchanged": 0
   },
   "marketStatus": {
     "open": false,
-    "text": "已收盘"
+    "text": "盘前"
   }
 }
