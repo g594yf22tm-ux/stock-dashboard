@@ -162,8 +162,8 @@ function _renderReportContent(panel, filename, code, name, reportMd, stockInfo, 
 
   panel.innerHTML = '' +
     '<button class="report-close" onclick="closeReportModal()" title="关闭 (Esc)">✕</button>' +
-    '<h1>📊 ' + (name||code||'报告') + ' 深度分析报告</h1>' +
-    '<div class="rp-meta">代码: ' + (code||'—') + ' | 文件: ' + decodeURIComponent(filename) + '</div>' +
+    '<h1>📊 ' + (code||name||'报告') + ' 深度分析报告</h1>' +
+    '<div class="rp-meta">代码: ' + (name||'—') + ' | 股票: ' + (code||'—') + ' | 文件: ' + decodeURIComponent(filename) + '</div>' +
     stripHtml +
     '<div class="report-tabs">' +
       '<div class="report-tab active" onclick="_switchRptTab(this,\'content\')">📄 分析报告</div>' +
