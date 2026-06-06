@@ -41,3 +41,4 @@ venv/
 # 日志
 *.log
 .claude/logs/
+.gstack/
