@@ -239,7 +239,7 @@ async function main() {
     .map(s => ({
       ticker: s.ticker, name: s.name,
       price: s.price, changePercent: s.changePercent,
-      volume: s.volume
+      volume: s.volume, amount: s.amount
     }));
 
   // 涨跌统计
