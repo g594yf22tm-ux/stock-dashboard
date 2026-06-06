@@ -688,7 +688,7 @@ function renderSectors(sectors) {
 function renderTrending(trending) {
   const el = document.getElementById('trendingList');
   if (!trending?.length) { el.innerHTML = '<div class="no-data">暂无热门数据</div>'; return; }
-  el.innerHTML = '<table><thead><tr><th>代码</th><th>名称</th><th>价格</th><th>涨跌幅</th><th>成交量</th></tr></thead><tbody>' +
+  el.innerHTML = '<table><thead><tr><th>代码</th><th>名称</th><th>价格</th><th>涨跌幅</th><th>成交量</th><th>成交额</th></tr></thead><tbody>' +
     trending.map(t => `<tr style="cursor:pointer" onclick="showStockDetail('${t.ticker}')">
       <td><b>${t.ticker}</b></td>
       <td><span class="stock-link">${t.name||''}</span></td>
@@ -748,11 +748,11 @@ function applySortAndRender() {
       <td class="${up?'up':'down'}">${F.pct(s.changePercent)}</td>
       <td>${F.vol(s.volume)}</td>
       <td>${s.amount ? (s.amount/1e8).toFixed(2)+'亿' : '—'}</td>
-      <td style="color:${peColor}">${s.pe ? (+s.pe).toFixed(1) : '—'}</td>
+      
       <td>${s.targetPrice ? '¥'+s.targetPrice : '—'}</td>
       <td><span class="star">${F.stars(rating)}</span></td>
       <td><span class="badge ${sigCls}">${sigText}</span></td>
-    </tr>`;
+    <td>${s.amount ? (s.amount/1e8).toFixed(2)+'亿' : '—'}</td></tr>`;
   }).join('');
 
   // 更新排序箭头
@@ -1039,7 +1039,7 @@ async function doSearch(q) {
       return;
     }
     box.innerHTML = results.map(function(r) { return buildSearchItemHTML(r); }).join('');
-    box.innerHTML += '<div class="search-tip">📡 CDN模式 · '+Object.keys(_extQuotes).length+'只有实时行情</div>';
+    box.innerHTML += '<div class="search-tip">📡 CDN模式 · '+Object.keys(_extQuotes).length+'只实时行情覆盖</div>';
     return;
   }
 
@@ -1746,6 +1746,20 @@ function openReportByTicker(ticker, name) {
   }
   // 没找到，直接显示行情
   showStockDetail(ticker);
+}
+</script>
+
+
+<script>
+// CDN模式新闻获取（报告弹窗使用）
+async function getStockNews(code, name) {
+  if (!isRemote) {
+    try {
+      const r = await fetch('/api/news/' + encodeURIComponent(code));
+      if (r.ok) { const d = await r.json(); return d.news || []; }
+    } catch(e) {}
+  }
+  return [];
 }
 </script>
 
