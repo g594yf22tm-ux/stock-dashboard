@@ -8,24 +8,24 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <style>
     :root {
-      /* 基础背景 — 深邃蓝黑底 */
-      --bg: #090d1a; --surface: #111827; --surface2: #1a2332; --border: #252f3f;
-      /* 文字层级 */
-      --text: #e9ecef; --text-secondary: #b0b8c4; --muted: #6b7280;
-      /* A股色系: 红涨绿跌 */
-      --up: #f04452; --up-bright: #ff5c6c; --up-bg: rgba(240,68,82,0.12); --up-border: rgba(240,68,82,0.28);
-      --down: #00b578; --down-bright: #00d68a; --down-bg: rgba(0,181,120,0.12); --down-border: rgba(0,181,120,0.28);
-      /* 主色调 — 电光蓝 */
-      --primary: #3b82f6; --primary-light: #60a5fa; --primary-bg: rgba(59,130,246,0.1);
-      /* 强调色 — 琥珀金 */
-      --accent: #f59e0b; --accent-light: #fbbf24; --accent-bg: rgba(245,158,11,0.1);
-      /* 信息色 — 青色 */
-      --info: #22d3ee; --info-bg: rgba(34,211,238,0.08);
-      /* 悬停/选中 */
-      --hover: rgba(255,255,255,0.04); --active: rgba(59,130,246,0.08);
+      /* 背景层级 — 纯黑+蓝紫调 */
+      --bg: #060810; --surface: #0d1117; --surface2: #131a24; --border: #1e293b;
+      /* 文字 — 高对比 */
+      --text: #f0f2f5; --text-secondary: #9ca3af; --muted: #5c6370;
+      /* A股: 红涨(中国红)绿跌 */
+      --up: #f43f5e; --up-bright: #fb7185; --up-bg: rgba(244,63,94,0.14); --up-border: rgba(244,63,94,0.30);
+      --down: #10b981; --down-bright: #34d399; --down-bg: rgba(16,185,129,0.12); --down-border: rgba(16,185,129,0.26);
+      /* 主色调 — 深邃蓝 */
+      --primary: #4f8cff; --primary-light: #7aacff; --primary-bg: rgba(79,140,255,0.12);
+      /* 强调 — 金色 */
+      --accent: #f59e0b; --accent-light: #fbbf24; --accent-bg: rgba(245,158,11,0.12);
+      /* 信息 — 青蓝 */
+      --info: #38bdf8; --info-bg: rgba(56,189,248,0.08);
+      /* 交互 */
+      --hover: rgba(255,255,255,0.03); --active: rgba(79,140,255,0.10);
       /* 阴影 */
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3); --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
-      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.5); --shadow-md: 0 4px 12px rgba(0,0,0,0.6);
+      --shadow-lg: 0 8px 28px rgba(0,0,0,0.7);
     }
     /* A股红涨绿跌 */
     .up { color: var(--up-bright); } .down { color: var(--down-bright); }
