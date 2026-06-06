@@ -335,6 +335,55 @@
     /* 搜索高亮 */
     .search-highlight { background: rgba(79,140,255,0.2); border-radius: 4px; padding: 0 2px; }
 
+    
+    /* 报告内嵌弹窗 */
+    .report-overlay {
+      display: none; position: fixed; top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.75); z-index: 600;
+      justify-content: center; align-items: flex-start; padding-top: 40px;
+    }
+    .report-overlay.show { display: flex; }
+    .report-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; width: 92%; max-width: 960px; max-height: 88vh;
+      overflow-y: auto; padding: 28px; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    }
+    .report-panel h1 { font-size: 1.4em; margin: 0 0 4px 0; }
+    .report-panel h2 { font-size: 1.1em; margin: 20px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .report-panel h3 { font-size: 0.95em; margin: 14px 0 8px; }
+    .report-panel table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85em; }
+    .report-panel th, .report-panel td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+    .report-panel th { background: var(--surface2); font-weight: 600; }
+    .report-panel blockquote { border-left: 3px solid var(--accent); margin: 8px 0; padding: 6px 14px; background: var(--surface2); border-radius: 0 6px 6px 0; }
+    .report-panel hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .report-panel code { background: var(--surface2); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+    .report-panel .rp-meta { font-size: 0.8em; color: var(--muted); margin-bottom: 16px; }
+    .report-close {
+      position: sticky; top: 0; float: right; z-index: 10;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 50%;
+      color: var(--muted); font-size: 1.3em; cursor: pointer; width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .report-close:hover { color: var(--text); background: var(--border); }
+    .report-loading { text-align: center; padding: 40px; color: var(--muted); }
+    .report-loading .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .report-news-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85em; }
+    .report-news-item:last-child { border-bottom: none; }
+    .report-news-item a { color: var(--text); text-decoration: none; }
+    .report-news-item a:hover { color: var(--primary); }
+    .report-news-item .rn-date { font-size: 0.75em; color: var(--muted); }
+    .report-strip { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; padding: 10px 14px; background: var(--surface2); border-radius: 8px; font-size: 0.85em; }
+    .report-strip .rs-item { text-align: center; min-width: 60px; }
+    .report-strip .rs-item .v { font-weight: 700; font-size: 1.1em; }
+    .report-strip .rs-item .l { font-size: 0.7em; color: var(--muted); }
+    .report-tabs { display: flex; gap: 0; margin: 12px 0; border-bottom: 2px solid var(--border); }
+    .report-tab { padding: 8px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 0.9em; }
+    .report-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .report-tab:hover { color: var(--text); }
+    .report-tab-content { display: none; }
+    .report-tab-content.active { display: block; }
+
     /* 可点击的股票名 */
     .stock-link { color: var(--primary); cursor: pointer; text-decoration: none; }
     .stock-link:hover { text-decoration: underline; color: #6db3ff; }
@@ -476,6 +525,13 @@
 </div>
 
 <!-- 股票详情弹窗 -->
+
+<!-- 报告内嵌弹窗 -->
+<div class="report-overlay" id="reportOverlay" onclick="if(event.target===this)closeReportModal()">
+  <div class="report-panel" id="reportPanel">
+    <div class="report-loading"><div class="spinner"></div><p>加载报告中...</p></div>
+  </div>
+</div>
 <div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
   <div class="detail-panel" id="detailPanel">
     <div class="detail-loading">加载中...</div>
@@ -804,12 +860,12 @@ function renderReports(reports) {
     <div class="report-row" data-file="${encodeURIComponent(r.filename)}">
       <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()">
       <span class="report-icon">📄</span>
-      <a href="/report.html?file=${encodeURIComponent(r.filename)}" target="_blank" class="report-link" title="点击查看完整报告">
-        <span class="report-name">${stockName}</span>
-        ${stockCode ? '<span class="sector-tag" style="font-size:0.68em">'+stockCode+'</span>' : ''}
-        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap">${typeLabel}</span>
-        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap;margin-left:auto">${r.date||''}</span>
-      </a>
+      <span class="report-link" onclick="openReportInline('${encodeURIComponent(r.filename)}','${stockCode}','${stockName}')" title="点击查看报告+实时行情+新闻" style="cursor:pointer">
+	        <span class="report-name">${stockName}</span>
+	        ${stockCode ? '<span class="sector-tag" style="font-size:0.68em">'+stockCode+'</span>' : ''}
+	        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap">${typeLabel}</span>
+	        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap;margin-left:auto">${r.date||''}</span>
+	      </span>
       <button class="report-del" onclick="deleteReport('${encodeURIComponent(r.filename)}', this)" title="${isRemote?'隐藏此报告':'删除此报告'}">🗑️</button>
     </div>`;
   }).join('');
@@ -1653,5 +1709,6 @@ setInterval(updateClock, 1000);
 refreshAll();
 startSmartRefresh();
 </script>
+  <script src="report-modal.js" defer></script>
 </body>
 </html>
