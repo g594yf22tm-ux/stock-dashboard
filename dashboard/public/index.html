@@ -852,17 +852,18 @@ function renderReports(reports) {
 
   el.innerHTML = toolbar + reports.map(r => {
     const parts = r.filename.replace('.md','').split('_');
-    const stockName = parts[0] || '—';
-    const stockCode = parts[1] || '';
+    const codePrefix = parts[0] || '';          // 如 '600036'
+    const stockShortName = parts[1] || '';      // 如 '招商银行'
+    const fullTicker = /^\d{6}$/.test(codePrefix) ? codePrefix + (codePrefix.startsWith('6')||codePrefix.startsWith('5') ? '.SS' : '.SZ') : codePrefix;
     let rawType = parts[2] || '分析';
     let typeLabel = rawType.includes('deep') ? '📊 深度研报' : rawType.includes('分析') ? '📝 快速分析' : '📄 ' + rawType;
     return `
     <div class="report-row" data-file="${encodeURIComponent(r.filename)}">
       <input type="checkbox" class="report-check report-cb" data-file="${encodeURIComponent(r.filename)}" onclick="event.stopPropagation()">
       <span class="report-icon">📄</span>
-      <span class="report-link" onclick="openReportInline('${encodeURIComponent(r.filename)}','${stockCode}','${stockName}')" title="点击查看报告+实时行情+新闻" style="cursor:pointer">
-	        <span class="report-name">${stockName}</span>
-	        ${stockCode ? '<span class="sector-tag" style="font-size:0.68em">'+stockCode+'</span>' : ''}
+      <span class="report-link" onclick="openReportInline('${encodeURIComponent(r.filename)}','${fullTicker}','${stockShortName}')" title="点击查看报告+实时行情+新闻" style="cursor:pointer">
+	        <span class="report-name">${stockShortName||codePrefix}</span>
+	        ${fullTicker ? '<span class="sector-tag" style="font-size:0.68em">'+fullTicker+'</span>' : ''}
 	        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap">${typeLabel}</span>
 	        <span style="color:var(--muted);font-size:0.7em;white-space:nowrap;margin-left:auto">${r.date||''}</span>
 	      </span>
