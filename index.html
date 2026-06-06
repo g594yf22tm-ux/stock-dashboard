@@ -8,14 +8,27 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <style>
     :root {
-      --bg: #0c0c1d; --surface: #161633; --surface2: #1e1e42; --border: #2a2a55;
-      --text: #e8eaed; --muted: #8890a8; --up: #ec4f5e; --down: #22c55e;
-      --primary: #4f8cff; --accent: #f59e0b; --info: #06b6d4;
-      --up-bg: rgba(236,79,94,0.12); --up-border: rgba(236,79,94,0.3);
-      --down-bg: rgba(34,197,94,0.12); --down-border: rgba(34,197,94,0.3);
+      /* 基础背景 — 深邃蓝黑底 */
+      --bg: #090d1a; --surface: #111827; --surface2: #1a2332; --border: #252f3f;
+      /* 文字层级 */
+      --text: #e9ecef; --text-secondary: #b0b8c4; --muted: #6b7280;
+      /* A股色系: 红涨绿跌 */
+      --up: #f04452; --up-bright: #ff5c6c; --up-bg: rgba(240,68,82,0.12); --up-border: rgba(240,68,82,0.28);
+      --down: #00b578; --down-bright: #00d68a; --down-bg: rgba(0,181,120,0.12); --down-border: rgba(0,181,120,0.28);
+      /* 主色调 — 电光蓝 */
+      --primary: #3b82f6; --primary-light: #60a5fa; --primary-bg: rgba(59,130,246,0.1);
+      /* 强调色 — 琥珀金 */
+      --accent: #f59e0b; --accent-light: #fbbf24; --accent-bg: rgba(245,158,11,0.1);
+      /* 信息色 — 青色 */
+      --info: #22d3ee; --info-bg: rgba(34,211,238,0.08);
+      /* 悬停/选中 */
+      --hover: rgba(255,255,255,0.04); --active: rgba(59,130,246,0.08);
+      /* 阴影 */
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3); --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
     }
     /* A股红涨绿跌 */
-    .up { color: var(--up); } .down { color: var(--down); }
+    .up { color: var(--up-bright); } .down { color: var(--down-bright); }
     .up-bg { background: var(--up-bg); } .down-bg { background: var(--down-bg); }
 
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -25,11 +38,11 @@
     }
     ::-webkit-scrollbar { width:5px; }
     ::-webkit-scrollbar-track { background:var(--bg); }
-    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+    ::-webkit-scrollbar-thumb { background:var(--muted); border-radius:3px; }::-webkit-scrollbar-thumb:hover { background:var(--text-secondary); } 
 
     /* 顶部导航 */
     .header {
-      background: linear-gradient(135deg, #161633, #0c0c1d);
+      background: linear-gradient(135deg, var(--surface), var(--bg));
       border-bottom: 1px solid var(--border); padding: 10px 24px;
       display: flex; align-items: center; gap: 20px;
       position: sticky; top:0; z-index:100;
@@ -40,7 +53,7 @@
     }
     .header-brand .icon {
       width: 34px; height: 34px; border-radius: 8px;
-      background: linear-gradient(135deg, var(--primary), var(--down));
+      background: linear-gradient(135deg, var(--primary), var(--down-bright));
       display: flex; align-items: center; justify-content: center;
       font-size: 1.1em;
     }
@@ -60,7 +73,7 @@
     .search-box:focus {
       border-color: var(--primary);
       background: var(--surface2);
-      box-shadow: 0 0 0 3px rgba(79,140,255,0.12), 0 0 20px rgba(79,140,255,0.06);
+      box-shadow: 0 0 0 3px rgba(79,140,255,0.12), 0 0 20px var(--active);
     }
     .search-box:hover { border-color: rgba(79,140,255,0.5); }
     .search-box::placeholder { color: var(--muted); font-size: 0.9em; }
@@ -106,10 +119,10 @@
       padding: 5px 12px; border-radius: 16px; font-size: 0.78em; font-weight: 600;
       display: flex; align-items: center; gap: 6px;
     }
-    .market-badge.open { background: var(--up-bg); color: var(--up); border: 1px solid var(--up-border); }
+    .market-badge.open { background: var(--up-bg); color: var(--up-bright); border: 1px solid var(--up-border); }
     .market-badge.closed { background: rgba(136,144,168,0.12); color: var(--muted); border: 1px solid rgba(136,144,168,0.3); }
     .dot { width: 7px; height: 7px; border-radius: 50%; }
-    .dot.live { background: var(--up); box-shadow: 0 0 5px var(--up); animation: pulse 2s infinite; }
+    .dot.live { background: var(--up-bright); box-shadow: 0 0 5px var(--up-bright); animation: pulse 2s infinite; }
     .dot.off { background: var(--muted); }
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
     .clock { font-size: 0.85em; color: var(--muted); text-align: right; line-height: 1.4; }
@@ -142,7 +155,7 @@
       .sector-item { padding: 8px; }
       .sector-item .name { font-size: 0.7em; }
       .sector-item .pct { font-size: 0.9em; }
-      .card { padding: 12px; border-radius: 8px; }
+      .card { box-shadow: var(--shadow-sm); transition: box-shadow 0.25s, transform 0.2s; } padding: 12px; border-radius: 8px; }
       .card-title { font-size: 0.78em; margin-bottom: 10px; }
       table { font-size: 0.75em; }
       th, td { padding: 6px 8px; }
@@ -206,8 +219,8 @@
       display: inline-block; padding: 3px 10px; border-radius: 12px;
       font-size: 0.78em; font-weight: 700;
     }
-    .badge.buy { background: var(--up-bg); color: var(--up); border: 1px solid var(--up-border); }
-    .badge.hold { background: rgba(245,158,11,0.12); color: var(--accent); border: 1px solid rgba(245,158,11,0.3); }
+    .badge.buy { background: var(--up-bg); color: var(--up-bright); border: 1px solid var(--up-border); }
+    .badge.hold { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(245,158,11,0.35); }
     .badge.watch { background: rgba(79,140,255,0.12); color: var(--primary); border: 1px solid rgba(79,140,255,0.3); }
 
     .star { color: var(--accent); letter-spacing: 1px; }
@@ -218,7 +231,7 @@
       background: var(--surface2); border-radius: 10px; padding: 16px;
       border-left: 3px solid var(--primary);
     }
-    .analysis-card.buy { border-left-color: var(--up); }
+    .analysis-card.buy { border-left-color: var(--up-bright); }
     .analysis-card.hold { border-left-color: var(--accent); }
     .analysis-card.watch { border-left-color: var(--info); }
     .analysis-card .sname { font-weight: 700; font-size: 1em; }
@@ -471,7 +484,7 @@
   
     .sort-arrow { margin-left: 4px; font-size: 0.7em; opacity: 0.4; }
     .sort-arrow.active { opacity: 1; color: var(--primary); }
-    .sort-active { background: rgba(79,140,255,0.08); }
+    .sort-active { background: var(--active); }
 
   
     .top-bar {
@@ -487,7 +500,7 @@
     .top-bar .search-box { width: 100%; }
     .freshness-badge {
       font-size: 0.7em; padding: 3px 8px; border-radius: 10px;
-      background: rgba(0,200,100,0.12); color: var(--up);
+      background: rgba(0,200,100,0.12); color: var(--up-bright);
       white-space: nowrap;
     }
     .freshness-badge.stale { background: rgba(255,180,0,0.12); color: var(--accent); }
@@ -514,7 +527,7 @@
 
   
     .card { transition: box-shadow 0.2s, transform 0.15s; }
-    .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    .card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
     .sector-tag {
       display: inline-block; padding: 1px 6px; border-radius: 4px;
       font-size: 0.75em; background: rgba(79,140,255,0.1);
@@ -526,11 +539,11 @@
       font-size: 0.75em; padding: 2px 8px; border-radius: 10px;
       display: inline-block; margin-left: 6px;
     }
-    .market-status.open { background: rgba(0,200,100,0.12); color: var(--up); }
+    .market-status.open { background: rgba(0,200,100,0.12); color: var(--up-bright); }
     .market-status.closed { background: rgba(255,180,0,0.1); color: var(--accent); }
     /* 表格行斑马纹 */
-    #watchlistBody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
-    #watchlistBody tr:hover { background: rgba(79,140,255,0.06) !important; }
+    #watchlistBody tr:nth-child(even) { background: var(--hover); }
+    #watchlistBody tr:hover { background: var(--active) !important; }
     /* 信号徽章动画 */
     .badge { transition: all 0.15s; }
     .badge:hover { filter: brightness(1.1); }
@@ -544,6 +557,32 @@
     .index-card:hover { transform: translateY(-1px); }
     .index-card .ic-price { font-size: 1.1em; font-weight: 700; font-family: 'JetBrains Mono','Consolas',monospace; }
     .index-card .ic-change { font-size: 0.85em; font-weight: 600; }
+
+  
+    /* 精致细节 */
+    .card { border: 1px solid var(--border); position: relative; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent); opacity: 0.4; }
+    .card-title { font-weight: 600; letter-spacing: 0.01em; }
+    table { border-collapse: separate; border-spacing: 0; }
+    th { font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; font-size: 0.72em; }
+    td { font-size: 0.85em; }
+    .badge { transition: all 0.2s ease; }
+    .badge.buy { background: var(--up-bg); color: var(--up); border: 1px solid var(--up-border); }
+    .badge.hold { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(245,158,11,0.3); }
+    .badge.watch { background: rgba(107,114,128,0.1); color: var(--text-secondary); border: 1px solid rgba(107,114,128,0.2); }
+    .btn { transition: all 0.15s ease; }
+    .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .search-box:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+    #watchlistBody tr, #favBody tr { transition: background 0.15s; }
+    .detail-metric:hover { background: var(--surface); border-color: var(--primary); }
+    .detail-metric { transition: all 0.15s; border: 1px solid transparent; }
+    @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+    .search-results .result-item { transition: background 0.12s; border-left: 2px solid transparent; }
+    .search-results .result-item:hover { border-left-color: var(--primary); }
+    hr { border-color: var(--border); opacity: 0.5; }
+    .loading { color: var(--text-secondary); }
 
   </style>
 </head>
@@ -839,7 +878,7 @@ function renderTrending(trending) {
 function renderSparkline(data, chgPct) {
   if (!data || data.length < 2) return '—';
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
-  const color = (+chgPct) >= 0 ? 'var(--up)' : 'var(--down)';
+  const color = (+chgPct) >= 0 ? 'var(--up-bright)' : 'var(--down-bright)';
   return data.map(v => {
     const h = Math.max(3, ((v-min)/range)*22+5);
     return `<span style="height:${h}px;background:${color}"></span>`;
@@ -879,7 +918,7 @@ function applySortAndRender() {
     const up = +s.changePercent >= 0;
     const peColor = s.pe > 80 ? 'var(--accent)' : s.pe > 40 ? 'var(--info)' : '';
     return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
-      <td><b>${s.ticker}</b>${s._live?' <span style="font-size:0.65em;color:var(--up)">●</span>':''}</td>
+      <td><b>${s.ticker}</b>${s._live?' <span style="font-size:0.65em;color:var(--up-bright)">●</span>':''}</td>
       <td><span class="stock-link">${s.name||s.ticker}</span>${(function(){let t=s.sector?` <span class="sector-tag">${s.sector}</span>`:'';if(!s.sector&&isRemote&&_watchlistData){const w=_watchlistData.find(function(x){return x.ticker===s.ticker});if(w&&w.sector)t=` <span class="sector-tag">${w.sector}</span>`;}return t;})()}</td>
       <td>¥${F.price(s.price)}</td>
       <td class="${up?'up':'down'}">${(+s.change)>0?'+':''}${F.price(s.change)}</td>
@@ -930,7 +969,7 @@ function renderAnalysis(recommendations) {
     const sig = (r.recommendation?.signal || '').toUpperCase();
     const sigCls = sig === 'BUY' ? 'buy' : sig === 'SELL' ? 'watch' : sig === 'WATCH' ? 'watch' : 'hold';
     const sigMap = { BUY:'买入', HOLD:'持有', WATCH:'关注', SELL:'卖出' };
-    const scoreColor = v => (+v) >= 8 ? 'var(--up)' : (+v) >= 6 ? 'var(--accent)' : (+v) >= 4 ? 'var(--info)' : 'var(--muted)';
+    const scoreColor = v => (+v) >= 8 ? 'var(--up-bright)' : (+v) >= 6 ? 'var(--accent)' : (+v) >= 4 ? 'var(--info)' : 'var(--muted)';
     const _sigScore = (function(){
     var w = _watchlistData && _watchlistData.find(function(x){return x.ticker===r.ticker;});
     if (w && w.signal && w.signal.score) return w.signal.score;
@@ -1122,7 +1161,7 @@ function clientSearch(q) {
 
 function buildSearchItemHTML(r) {
   const up = (+(r.changePercent||0)) >= 0;
-  const priceColor = r.price ? (up ? 'var(--up)' : 'var(--down)') : 'var(--muted)';
+  const priceColor = r.price ? (up ? 'var(--up-bright)' : 'var(--down-bright)') : 'var(--muted)';
   return '<div class="result-item" onclick="selectAndView(\''+r.ticker+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px">'+
     '<div style="flex:1;min-width:0">'+
       '<div style="font-weight:600;font-size:0.9em">'+r.name+' <span style="color:var(--muted);font-size:0.75em;font-weight:400">'+r.ticker+'</span></div>'+
@@ -1308,8 +1347,8 @@ async function showStockDetail(ticker) {
     <div class="detail-grid">
       <div class="detail-metric"><div class="dm-label">开盘价</div><div class="dm-value">¥${F.price(stock.open)}</div></div>
       <div class="detail-metric"><div class="dm-label">昨收</div><div class="dm-value">¥${F.price(stock.prevClose)}</div></div>
-      <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up)">¥${F.price(stock.high)}</div></div>
-      <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down)">¥${F.price(stock.low)}</div></div>
+      <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up-bright)">¥${F.price(stock.high)}</div></div>
+      <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down-bright)">¥${F.price(stock.low)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交量</div><div class="dm-value">${F.vol(stock.volume)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交额</div><div class="dm-value">${(stock.amount/1e8).toFixed(2)}亿</div></div>
       ${stock.pe ? `<div class="detail-metric"><div class="dm-label">市盈率</div><div class="dm-value">${(+stock.pe).toFixed(1)}</div></div>` : ''}
@@ -1430,10 +1469,10 @@ function showStockDetailCDN(s) {
   let sigScore = 50, sigText = '数据不足', sigColor = 'var(--muted)';
   if (hasData && s.changePercent != null) {
     const cp = +s.changePercent;
-    if (cp >= 3) { sigScore = 80; sigText = '强势看多'; sigColor = 'var(--up)'; }
-    else if (cp >= 1) { sigScore = 65; sigText = '偏多'; sigColor = 'var(--up)'; }
-    else if (cp <= -3) { sigScore = 20; sigText = '弱势回避'; sigColor = 'var(--down)'; }
-    else if (cp <= -1) { sigScore = 35; sigText = '偏弱关注'; sigColor = 'var(--down)'; }
+    if (cp >= 3) { sigScore = 80; sigText = '强势看多'; sigColor = 'var(--up-bright)'; }
+    else if (cp >= 1) { sigScore = 65; sigText = '偏多'; sigColor = 'var(--up-bright)'; }
+    else if (cp <= -3) { sigScore = 20; sigText = '弱势回避'; sigColor = 'var(--down-bright)'; }
+    else if (cp <= -1) { sigScore = 35; sigText = '偏弱关注'; sigColor = 'var(--down-bright)'; }
     else { sigScore = 50; sigText = '震荡观望'; sigColor = 'var(--accent)'; }
   }
 
@@ -1460,8 +1499,8 @@ function showStockDetailCDN(s) {
     <div class="detail-grid">
       <div class="detail-metric"><div class="dm-label">开盘价</div><div class="dm-value">¥${F.price(s.open)}</div></div>
       <div class="detail-metric"><div class="dm-label">昨收</div><div class="dm-value">¥${(function(){if(s.changePercent!=null){return F.price(s.price/(1+ +s.changePercent/100));}return F.price(s.price);})()}</div></div>
-      <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up)">¥${F.price(s.high)}</div></div>
-      <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down)">¥${F.price(s.low)}</div></div>
+      <div class="detail-metric"><div class="dm-label">最高</div><div class="dm-value" style="color:var(--up-bright)">¥${F.price(s.high)}</div></div>
+      <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down-bright)">¥${F.price(s.low)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交量</div><div class="dm-value">${F.vol(s.volume)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交额</div><div class="dm-value">${s.amount ? (s.amount/1e8).toFixed(2)+'亿' : '—'}</div></div>
       <div class="detail-metric"><div class="dm-label">日振幅</div><div class="dm-value">${s.high&&s.low&&s.prevClose ? ((s.high-s.low)/s.prevClose*100).toFixed(2)+'%' : '—'}</div></div>
@@ -1570,11 +1609,11 @@ async function loadFavorites() {
         else if (_extQuotes[s.ticker]) { const q=_extQuotes[s.ticker]; price = q.p; changePercent = q.c; volume = q.v; amount = q.a; change = q.p ? (q.p * q.c / 100) : null; }
       }
       const cp2 = +(changePercent || 0);
-      let sigScore2 = 50, sigText2 = '震荡观望', sigColor2 = 'var(--accent)', sigBg2 = 'rgba(245,158,11,0.12)', sigBdr2 = 'rgba(245,158,11,0.3)';
-      if (cp2 >= 3) { sigScore2 = 80; sigText2 = '强势看多'; sigColor2 = 'var(--up)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
-      else if (cp2 >= 1) { sigScore2 = 65; sigText2 = '偏多'; sigColor2 = 'var(--up)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
-      else if (cp2 <= -3) { sigScore2 = 20; sigText2 = '弱势回避'; sigColor2 = 'var(--down)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
-      else if (cp2 <= -1) { sigScore2 = 35; sigText2 = '偏弱关注'; sigColor2 = 'var(--down)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
+      let sigScore2 = 50, sigText2 = '震荡观望', sigColor2 = 'var(--accent)', sigBg2 = 'var(--accent-bg)', sigBdr2 = 'rgba(245,158,11,0.35)';
+      if (cp2 >= 3) { sigScore2 = 80; sigText2 = '强势看多'; sigColor2 = 'var(--up-bright)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
+      else if (cp2 >= 1) { sigScore2 = 65; sigText2 = '偏多'; sigColor2 = 'var(--up-bright)'; sigBg2 = 'var(--up-bg)'; sigBdr2 = 'var(--up-border)'; }
+      else if (cp2 <= -3) { sigScore2 = 20; sigText2 = '弱势回避'; sigColor2 = 'var(--down-bright)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
+      else if (cp2 <= -1) { sigScore2 = 35; sigText2 = '偏弱关注'; sigColor2 = 'var(--down-bright)'; sigBg2 = 'var(--down-bg)'; sigBdr2 = 'var(--down-border)'; }
       const up = +(changePercent || 0) >= 0;
       return `<tr style="cursor:pointer" onclick="showStockDetail('${s.ticker}')">
         <td><b>${s.ticker}</b></td>
@@ -1585,7 +1624,7 @@ async function loadFavorites() {
         <td>${F.vol(volume)}</td>
         <td>${amount ? (amount/1e8).toFixed(2)+'亿' : '—'}</td>
         <td>${changePercent!=null?'<span class="badge" style="font-size:0.78em;background:'+sigBg2+';color:'+sigColor2+';border:1px solid '+sigBdr2+'">'+sigText2+' · '+sigScore2+'分</span>':'—'}</td>
-        <td><button class="btn" style="font-size:0.7em;padding:2px 8px;color:var(--down)" onclick="event.stopPropagation();removeFav('${s.ticker}')">✕ 移除</button></td>
+        <td><button class="btn" style="font-size:0.7em;padding:2px 8px;color:var(--down-bright)" onclick="event.stopPropagation();removeFav('${s.ticker}')">✕ 移除</button></td>
       </tr>`;
     }).join('');
   } catch(e) { console.error('Fav load error:', e); }
