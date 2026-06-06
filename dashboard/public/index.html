@@ -414,6 +414,13 @@
       background: var(--surface2); border: 1px solid var(--border);
       font-size: 0.75em; font-family: monospace; color: var(--muted);
     }
+  
+    /* 自选详情展开 */
+    .fav-main-row:hover { background: var(--surface2); }
+    .fav-detail-card { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .fav-group { border-bottom: 1px solid var(--border); }
+
   </style>
 </head>
 <body>
@@ -500,11 +507,11 @@
       <table>
         <thead>
           <tr>
-            <th>代码</th><th>名称</th><th>最新价</th><th>涨跌</th><th>涨跌幅</th>
-            <th>成交量</th><th>成交额</th><th>当日信号</th><th>操作</th>
+            <th>代码</th><th>名称</th><th>板块</th><th>最新价</th><th>涨跌幅</th>
+	            <th>目标价</th><th>潜在空间</th><th>成交额</th><th>分析信号</th><th>操作</th>
           </tr>
         </thead>
-        <tbody id="favBody"><tr><td colspan="9" class="no-data">点击搜索结果的 ⭐ 或详情页的「加自选」来添加</td></tr></tbody>
+        <tbody id="favBody"><tr><td colspan="11" class="no-data">点击搜索结果的 ⭐ 或详情页的「加自选」来添加</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1402,7 +1409,7 @@ async function loadFavorites() {
     document.getElementById('favSource').textContent = data?.source ? '(' + data.source + ')' : '';
     const tbody = document.getElementById('favBody');
     if (!data?.favorites?.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="no-data">点击搜索结果的 ⭐ 或详情页的「加自选」来添加</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="no-data">点击搜索结果的 ⭐ 或详情页的「加自选」来添加</td></tr>';
       return;
     }
     tbody.innerHTML = data.favorites.map(s => {
@@ -1711,5 +1718,36 @@ refreshAll();
 startSmartRefresh();
 </script>
   <script src="report-modal.js" defer></script>
+
+<script>
+// ── 自选详情展开 ──
+function toggleFavDetail(id, ticker) {
+  var row = document.getElementById(id);
+  if (!row) return;
+  var isVisible = row.style.display !== 'none';
+  // 关闭所有其他展开行
+  document.querySelectorAll('.fav-detail-row').forEach(function(r) {
+    if (r.id !== id) r.style.display = 'none';
+  });
+  row.style.display = isVisible ? 'none' : 'table-row';
+}
+
+// 通过ticker查找并打开报告
+function openReportByTicker(ticker, name) {
+  // 从 EMBEDDED_REPORTS 查找匹配的报告
+  if (typeof EMBEDDED_REPORTS !== 'undefined' && EMBEDDED_REPORTS.length) {
+    var found = EMBEDDED_REPORTS.find(function(r) {
+      return r.filename.indexOf(ticker.replace('.SS','').replace('.SZ','')) === 0;
+    });
+    if (found) {
+      openReportInline(encodeURIComponent(found.filename), ticker, name);
+      return;
+    }
+  }
+  // 没找到，直接显示行情
+  showStockDetail(ticker);
+}
+</script>
+
 </body>
 </html>
