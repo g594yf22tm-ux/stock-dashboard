@@ -421,6 +421,53 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     .fav-group { border-bottom: 1px solid var(--border); }
 
+  
+    /* ── 响应式：平板 ── */
+    @media (max-width: 1024px) {
+      .container { padding: 0 8px; }
+      .card { padding: 12px; border-radius: 10px; }
+      .card-title { font-size: 0.95em; }
+      .analysis-grid { grid-template-columns: 1fr; gap: 10px; }
+      .detail-panel { width: 95%; max-width: 95vw; padding: 16px; }
+      .report-panel { width: 95%; max-width: 95vw; padding: 16px; }
+      .report-strip { gap: 8px; }
+      .report-strip .rs-item { min-width: 50px; }
+      .fav-detail-card > div { flex-direction: column; }
+      .search-box { font-size: 0.9em; padding: 8px 10px; }
+    }
+    /* ── 响应式：手机 ── */
+    @media (max-width: 768px) {
+      body { font-size: 13px; }
+      .container { padding: 0 4px; }
+      .card { margin-bottom: 8px; padding: 8px; border-radius: 8px; }
+      .card-title { font-size: 0.85em; margin-bottom: 8px; }
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { font-size: 0.75em; }
+      th, td { padding: 4px 6px; white-space: nowrap; }
+      .analysis-grid { grid-template-columns: 1fr; gap: 8px; }
+      .detail-overlay { padding-top: 0; align-items: flex-start; }
+      .detail-panel { width: 100%; max-width: 100vw; max-height: 100vh; border-radius: 0; padding: 12px; }
+      .detail-price .dp-main { font-size: 1.4em; }
+      .detail-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+      .report-overlay { padding-top: 0; }
+      .report-panel { width: 100%; max-width: 100vw; max-height: 100vh; border-radius: 0; padding: 12px; }
+      .report-panel h1 { font-size: 1.1em; }
+      .report-strip { gap: 6px; }
+      .report-strip .rs-item { min-width: 45px; }
+      .report-strip .rs-item .v { font-size: 0.9em; }
+      .report-strip .rs-item .l { font-size: 0.65em; }
+      .fav-detail-card { padding: 8px 12px; }
+      .fav-detail-card > div { flex-direction: column; gap: 12px; }
+      .sector-grid { grid-template-columns: repeat(2, 1fr); }
+      .search-box { font-size: 0.85em; padding: 7px 8px; }
+      .search-panel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+      .btn { padding: 5px 10px; font-size: 0.75em; }
+      .report-toolbar { flex-wrap: wrap; gap: 4px; }
+      .report-toolbar button { font-size: 0.7em; padding: 4px 8px; }
+      .report-select-all { font-size: 0.75em; }
+      .header { font-size: 1em; padding: 8px 0; }
+    }
+
   </style>
 </head>
 <body>
@@ -1326,6 +1373,17 @@ function showStockDetailCDN(s) {
       <div class="detail-metric"><div class="dm-label">最低</div><div class="dm-value" style="color:var(--down)">¥${F.price(s.low)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交量</div><div class="dm-value">${F.vol(s.volume)}</div></div>
       <div class="detail-metric"><div class="dm-label">成交额</div><div class="dm-value">${s.amount ? (s.amount/1e8).toFixed(2)+'亿' : '—'}</div></div>
+      <div class="detail-metric"><div class="dm-label">日振幅</div><div class="dm-value">${s.high&&s.low&&s.prevClose ? ((s.high-s.low)/s.prevClose*100).toFixed(2)+'%' : '—'}</div></div>
+    </div>
+    <div class="detail-section" style="margin-top:0">
+      <div class="ds-title">📈 日内走势</div>
+      <canvas id="detailSparkline" style="width:100%;height:100px;border-radius:8px;background:var(--surface2)"></canvas>
+      <div style="display:flex;justify-content:space-between;font-size:0.68em;color:var(--muted);margin-top:4px;padding:0 4px">
+        <span>开 ¥${F.price(s.open||s.price)}</span>
+        <span>高 ¥${F.price(s.high||s.price)}</span>
+        <span>低 ¥${F.price(s.low||s.price)}</span>
+        <span>收 ¥${F.price(s.price)}</span>
+      </div>
     </div>
     <div class="detail-section">
       <div class="ds-title">🎯 当日技术信号</div>
@@ -1763,5 +1821,27 @@ async function getStockNews(code, name) {
 }
 </script>
 
+<script>
+// ── 夜间模式检测 ──
+(function(){
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      var root = document.documentElement;
+      root.style.setProperty('--bg','#f5f5f5');
+      root.style.setProperty('--surface','#ffffff');
+      root.style.setProperty('--surface2','#f0f0f0');
+      root.style.setProperty('--text','#1a1a1a');
+      root.style.setProperty('--muted','#666');
+      root.style.setProperty('--border','#e0e0e0');
+      root.style.setProperty('--up-bg','rgba(0,200,100,0.08)');
+      root.style.setProperty('--down-bg','rgba(255,80,80,0.08)');
+      root.style.setProperty('--up-border','rgba(0,200,100,0.2)');
+      root.style.setProperty('--down-border','rgba(255,80,80,0.2)');
+      document.body.style.color = '#1a1a1a';
+    }
+  } catch(e) {}
+})();
+</script>
+  <script src="sparkline.js" defer></script>
 </body>
 </html>
