@@ -990,7 +990,7 @@ function sortTable(col) {
 function renderAnalysis(recommendations) {
   const el = document.getElementById("analysisGrid");
   if (!recommendations?.length) {
-    el.innerHTML = '<div class="no-data" style="grid-column:1/-1">暂无分析数据<br><small>运行 npm run init 生成分析</small></div>';
+    el.innerHTML = "<div class="no-data" style="grid-column:1/-1">暂无分析数据<br><small>运行 npm run init 生成分析</small></div>";
     return;
   }
 
@@ -1065,6 +1065,8 @@ function renderAnalysis(recommendations) {
       "</div>" +
     "</div>";
   }).join("");
+}
+}
 }
 
 function renderReports(reports) {
