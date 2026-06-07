@@ -652,7 +652,7 @@
   </div>
 
   <!-- 快捷筛选 -->
-  <div class="quick-filters" id="quickFilters" style="display:flex;padding:6px 16px;border-bottom:1px solid var(--border);margin-bottom:2px">
+  <div class="quick-filters" id="quickFilters">
     <span style="font-size:0.72em;color:var(--muted);margin-right:4px">筛选:</span>
     <span class="qf-chip active" onclick="_filterWatchlist('all',this)">全部</span>
     <span class="qf-chip" onclick="_filterWatchlist('BUY',this)">🟢 看多</span>
@@ -913,7 +913,7 @@ function renderTrending(trending) {
       <td>¥${F.price(t.price)}</td>
       <td class="${F.dir(t.changePercent)}">${F.pct(t.changePercent)}</td>
       <td>${F.vol(t.volume)}</td>
-      <td>${(function(){ var amt=t.amount; if(!amt&&t.price&&t.volume) amt=t.price*t.volume; return amt?(amt/1e8).toFixed(2)+'亿':'—'; })()}</td>
+      <td>${t.amount ? (t.amount/1e8).toFixed(2)+'亿' : '—'}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 
@@ -990,7 +990,7 @@ function sortTable(col) {
 function renderAnalysis(recommendations) {
   const el = document.getElementById("analysisGrid");
   if (!recommendations?.length) {
-    el.innerHTML = '<div class="no-data" style="grid-column:1/-1">暂无分析数据<br><small>运行 npm run init 生成分析</small></div>';
+    el.innerHTML = "<div class="no-data" style="grid-column:1/-1">暂无分析数据<br><small>运行 npm run init 生成分析</small></div>";
     return;
   }
 
@@ -1065,6 +1065,8 @@ function renderAnalysis(recommendations) {
       "</div>" +
     "</div>";
   }).join("");
+}
+}
 }
 
 function renderReports(reports) {
