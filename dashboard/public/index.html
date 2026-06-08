@@ -1570,7 +1570,7 @@ function showStockDetailCDN(s) {
     </div>
     <div class="detail-section" style="margin-top:0">
       <div class="ds-title">📈 日内走势</div>
-      <canvas id="detailSparkline" style="width:100%;height:100px;border-radius:8px;background:var(--surface2)"></canvas>
+      <canvas id="detailSparkline" style="width:100%;height:130px;border-radius:8px;background:var(--surface2)"></canvas>
       <div style="display:flex;justify-content:space-between;font-size:0.68em;color:var(--muted);margin-top:4px;padding:0 4px">
         <span>开 ¥${F.price(s.open||s.price)}</span>
         <span>高 ¥${F.price(s.high||s.price)}</span>
@@ -2019,8 +2019,209 @@ async function getStockNews(code, name) {
   }
   return [];
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// 日内走势图 v2 — 智能OHLC模拟 + 渐变填充 + 交互提示 + 价格/时间轴
+// ═══════════════════════════════════════════════════════════════════════════
+function drawSparkline(canvasId, price, open, high, low, prevClose) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas || !price) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  var W = rect.width, H = 120;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  var o = open || price, h = high || price, l = low || price, c = price;
+  var range = h - l || price * 0.03;
+  var isUp = c >= o;
+
+  // A-share 红涨绿跌
+  var lineColor = isUp ? '#f43f5e' : '#10b981';
+  var fillTop = isUp ? 'rgba(244,63,94,' : 'rgba(16,185,129,';
+  var dotColor = isUp ? '#fb7185' : '#34d399';
+
+  var padT = 28, padB = 26, padL = 48, padR = 12;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+
+  // Y坐标转换
+  function y(v) { return padT + (h - v) / range * plotH; }
+
+  // ── 生成仿真日内路径 (基于OHLC的合理日内走势) ──
+  var pts = [];
+  var n = 60;
+  for (var i = 0; i <= n; i++) {
+    var t = i / n;
+    var v;
+    if (t < 0.15) {
+      // 开盘阶段: 开盘价附近波动
+      v = o + (Math.sin(t * 30) * range * 0.08);
+    } else if (t < 0.4) {
+      // 早盘: 向高点或低点移动
+      var progress1 = (t - 0.15) / 0.25;
+      var target1 = isUp ? h : l;
+      v = o + (target1 - o) * progress1 + Math.sin(t * 20) * range * 0.05;
+    } else if (t < 0.55) {
+      // 午间休市附近: 震荡
+      var midV = (h + l) / 2;
+      v = midV + Math.sin(t * 15) * range * 0.12;
+    } else if (t < 0.85) {
+      // 下午盘: 向收盘价移动
+      var progress2 = (t - 0.55) / 0.3;
+      var midV2 = isUp ? l + range * 0.4 : h - range * 0.4;
+      v = midV2 + (c - midV2) * progress2 + Math.sin(t * 18) * range * 0.04;
+    } else {
+      // 尾盘: 收敛到收盘价
+      var progress3 = (t - 0.85) / 0.15;
+      v = c + (Math.sin(t * 25) * range * 0.03) * (1 - progress3);
+    }
+    v = Math.min(h * 1.005, Math.max(l * 0.995, v));
+    pts.push({ x: padL + t * plotW, y: y(v), v: v });
+  }
+
+  // ── 背景网格 ──
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+  var gridLines = [y(h), y((h+l)/2), y(l)];
+  for (var gi = 0; gi < gridLines.length; gi++) {
+    ctx.beginPath(); ctx.moveTo(padL, gridLines[gi]); ctx.lineTo(W - padR, gridLines[gi]); ctx.stroke();
+  }
+
+  // ── 渐变填充 ──
+  var grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+  grad.addColorStop(0, fillTop + '0.25)');
+  grad.addColorStop(0.4, fillTop + '0.10)');
+  grad.addColorStop(1, fillTop + '0.01)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, padT + plotH);
+  for (var j = 0; j < pts.length; j++) ctx.lineTo(pts[j].x, pts[j].y);
+  ctx.lineTo(pts[n].x, padT + plotH);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── 走势线 ──
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (var k = 0; k < pts.length; k++) {
+    if (k === 0) ctx.moveTo(pts[k].x, pts[k].y);
+    else ctx.lineTo(pts[k].x, pts[k].y);
+  }
+  ctx.stroke();
+
+  // ── 收盘价圆点 ──
+  var lastPt = pts[n];
+  ctx.fillStyle = dotColor;
+  ctx.beginPath(); ctx.arc(lastPt.x, lastPt.y, 4.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(lastPt.x, lastPt.y, 2, 0, Math.PI * 2); ctx.fill();
+
+  // ── Y轴价格标签 ──
+  ctx.fillStyle = '#8599b8';
+  ctx.font = '10px -apple-system, PingFang SC, Microsoft YaHei, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(h.toFixed(2), padL - 4, y(h) + 4);
+  ctx.fillText(((h+l)/2).toFixed(2), padL - 4, y((h+l)/2) + 4);
+  ctx.fillText(l.toFixed(2), padL - 4, y(l) + 4);
+
+  // ── X轴时间标签 ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#4e6285';
+  ctx.font = '9px -apple-system, PingFang SC, Microsoft YaHei, sans-serif';
+  ctx.fillText('9:30', padL, H - 6);
+  ctx.fillText('11:30/13:00', padL + plotW * 0.5, H - 6);
+  ctx.fillText('15:00', padL + plotW, H - 6);
+
+  // ── 午休分隔线 ──
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.moveTo(padL + plotW * 0.42, padT);
+  ctx.lineTo(padL + plotW * 0.42, padT + plotH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── 交互: 鼠标悬停提示 ──
+  canvas._sparkData = pts;
+  canvas._sparkFmt = { lineColor: lineColor, dotColor: dotColor, padT: padT, padL: padL, plotW: plotW, plotH: plotH, isUp: isUp, W: W, H: H };
+  canvas.style.cursor = 'crosshair';
+
+  canvas.onmousemove = function(e) {
+    var r = canvas.getBoundingClientRect();
+    var mx = (e.clientX - r.left) * (W / r.width);
+    var data = canvas._sparkData;
+    if (!data) return;
+    // 找最近点
+    var best = data[0], bestDist = Infinity;
+    for (var d = 0; d < data.length; d++) {
+      var dist = Math.abs(data[d].x - mx);
+      if (dist < bestDist) { bestDist = dist; best = data[d]; }
+    }
+    // 重绘覆盖层
+    drawSparkline(canvasId, price, open, high, low, prevClose);
+    // 画竖线
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(best.x, canvas._sparkFmt.padT);
+    ctx.lineTo(best.x, canvas._sparkFmt.padT + canvas._sparkFmt.plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 画圆点
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(best.x, best.y, 3, 0, Math.PI * 2); ctx.fill();
+    // 价格标签
+    var lbl = best.v.toFixed(2);
+    var lw = ctx.measureText(lbl).width + 10;
+    var lx = Math.max(2, Math.min(W - lw - 2, best.x - lw / 2));
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(lx, best.y - 28, lw, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px -apple-system, PingFang SC, Microsoft YaHei, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(lbl, lx + lw / 2, best.y - 12);
+  };
+  canvas.onmouseleave = function() {
+    drawSparkline(canvasId, price, open, high, low, prevClose);
+  };
+
+  // ── 存储参数用于重绘 ──
+  canvas._sparkParams = [canvasId, price, open, high, low, prevClose];
+}
+
+// 初始化: 当详情弹窗打开时自动绘制走势图
+var _sparkObserver = new MutationObserver(function() {
+  var cvs = document.getElementById('detailSparkline');
+  if (cvs && !cvs._sparkReady) {
+    cvs._sparkReady = true;
+    setTimeout(function() {
+      var priceEl = document.querySelector('.dp-main');
+      var price = priceEl ? parseFloat(priceEl.innerText.replace('¥','')) : 0;
+      var metrics = document.querySelectorAll('.dm-value');
+      var open = 0, high = 0, low = 0, prevClose = 0;
+      for (var i = 0; i < metrics.length; i++) {
+        var txt = metrics[i].innerText;
+        var prev = metrics[i].previousElementSibling;
+        var label = prev ? prev.innerText : '';
+        if (label.includes('开盘')) open = parseFloat(txt.replace('¥',''));
+        if (label.includes('最高')) high = parseFloat(txt.replace('¥',''));
+        if (label.includes('最低')) low = parseFloat(txt.replace('¥',''));
+        if (label.includes('昨收')) prevClose = parseFloat(txt.replace('¥',''));
+      }
+      if (price) drawSparkline('detailSparkline', price, open || price, high || price, low || price, prevClose);
+    }, 150);
+  }
+});
+_sparkObserver.observe(document.body, { childList: true, subtree: true });
 </script>
-  <script src="sparkline.js" defer></script>
 
 <script>
 // ── 快捷筛选 ──
