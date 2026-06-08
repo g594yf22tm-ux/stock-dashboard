@@ -1880,6 +1880,7 @@ async function refreshAll() {
   }
 
   if (live?.stocks) {
+    if (live.timestamp) window._dataTimestamp = live.timestamp;
     renderWatchlist(live.stocks, live.source);
   } else {
     try {
@@ -2049,17 +2050,40 @@ function _updateFreshness() {
   var badge = document.getElementById('freshnessBadge');
   if (!badge) return;
   var now = new Date();
-  var mins = now.getMinutes();
-  // 周末或盘后: 显示"已收盘"标记
-  var day = now.getDay(), h = now.getHours();
-  var t = h * 60 + mins;
+  var day = now.getDay(), h = now.getHours(), m = now.getMinutes();
+  var t = h * 60 + m;
   var isTrading = (day >= 1 && day <= 5) && ((t >= 9*60+15 && t <= 11*60+30) || (t >= 13*60 && t <= 15*60));
-  if (isTrading) {
+
+  // 读取数据实际时间戳
+  var dataTime = '';
+  if (typeof _watchlistData !== 'undefined' && _watchlistData && _watchlistData.length > 0) {
+    // 从全局缓存读取
+    dataTime = window._dataTimestamp || '';
+  }
+  if (!dataTime && typeof _lastWatchlistTimestamp !== 'undefined') {
+    dataTime = _lastWatchlistTimestamp;
+  }
+
+  if (dataTime) {
+    // 解析ISO时间戳显示为北京时间
+    var d = new Date(dataTime);
+    var bj = new Date(d.getTime() + 8*3600*1000);
+    var dateStr = (bj.getUTCMonth()+1)+'/'+bj.getUTCDate()+' ';
+    dateStr += String(bj.getUTCHours()).padStart(2,'0')+':'+String(bj.getUTCMinutes()).padStart(2,'0');
+    badge.textContent = '📅 ' + dateStr;
+  } else if (isTrading) {
     badge.textContent = '● 交易中';
-    badge.className = 'freshness-badge';
   } else {
     badge.textContent = '○ 已收盘';
-    badge.className = 'freshness-badge stale';
+  }
+
+  // 颜色：数据>1天=stale
+  if (dataTime) {
+    var age = Date.now() - new Date(dataTime).getTime();
+    var hours = age / 3600000;
+    badge.className = hours > 24 ? 'freshness-badge old' : hours > 6 ? 'freshness-badge stale' : 'freshness-badge';
+  } else {
+    badge.className = isTrading ? 'freshness-badge' : 'freshness-badge stale';
   }
 }
 _updateFreshness();
