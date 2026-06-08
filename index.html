@@ -1695,7 +1695,23 @@ async function loadFavorites() {
 
 // ── 快速分析 ────────────────────────────────────────────────────────────
 async function quickAnalyze(ticker) {
-
+  // CDN模式：直接查找已有报告
+  if (isRemote) {
+    var code = (ticker||'').replace('.SS','').replace('.SZ','');
+    var found = (EMBEDDED_REPORTS||[]).find(function(r){ return r.filename.indexOf(code) === 0; });
+    if (found) {
+      showToast('📄 打开报告: ' + found.title);
+      openReportInline(encodeURIComponent(found.filename), ticker, '');
+      return;
+    }
+    // 尝试从报告列表匹配
+    var name = '';
+    var s = (_watchlistData||[]).find(function(d){ return d.ticker === ticker; });
+    if (s) name = s.name;
+    showToast('💡 报告需通过Claude Code生成: 输入「深度分析 '+ticker+'」');
+    return;
+  }
+  // 本地模式：调用API生成
   showToast('📝 正在生成分析报告...');
   try {
     const resp = await fetch(API.analyze, {
@@ -1705,7 +1721,7 @@ async function quickAnalyze(ticker) {
     const r = await resp.json();
     if (r.status === 'generated') {
       showToast('✅ 报告已生成: ' + r.name);
-      refreshAll(); // 刷新报告列表
+      refreshAll();
     }
   } catch(e) { showToast('❌ 分析失败'); }
 }
