@@ -815,8 +815,13 @@ if (isRemote) {
 }
 
 async function fetchCDN(file) {
-  try { const r = await fetch(CDN+'/'+file, {cache:'no-cache'}); if (r.ok) return r.json(); }
-  catch(e) { console.error('CDN:', e.message); }
+  try {
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 8000);
+    var r = await fetch(CDN+'/'+file, {cache:'no-cache', signal: controller.signal});
+    clearTimeout(timer);
+    if (r.ok) return r.json();
+  } catch(e) { console.error('CDN:', file, e.message); }
   return null;
 }
 
@@ -1858,6 +1863,17 @@ function updateClock() {
   document.getElementById('marketBadge').className = `market-badge ${ms.cls}`;
 }
 
+// ── 带重试的获取 ──────────────────────────────────────────────────────────
+async function _retry(url, n) {
+  n = n || 2;
+  for (var i = 0; i <= n; i++) {
+    var r = await get(url);
+    if (r !== null) return r;
+    if (i < n) await new Promise(function(resolve) { setTimeout(resolve, 1000); });
+  }
+  return null;
+}
+
 // ── 主刷新 ───────────────────────────────────────────────────────────────
 
 async function refreshAll() {
@@ -1879,12 +1895,12 @@ async function refreshAll() {
   }
 
   const start = Date.now();
-  // 使用 allSettled 避免单个API失败导致全部卡住
+  // 使用 allSettled + 重试 避免单个API失败导致全部卡住
   const results = await Promise.allSettled([
-    get(API.market),
-    get(API.watchlistLive),
-    get(API.analysis),
-    get(API.reports)
+    _retry(API.market),
+    _retry(API.watchlistLive),
+    _retry(API.analysis),
+    _retry(API.reports)
   ]);
   const elapsed = Date.now() - start;
 
