@@ -815,13 +815,8 @@ if (isRemote) {
 }
 
 async function fetchCDN(file) {
-  try {
-    var controller = new AbortController();
-    var timer = setTimeout(function(){ controller.abort(); }, 8000);
-    var r = await fetch(CDN+'/'+file, {cache:'no-cache', signal: controller.signal});
-    clearTimeout(timer);
-    if (r.ok) return r.json();
-  } catch(e) { console.error('CDN:', file, e.message); }
+  try { const r = await fetch(CDN+'/'+file, {cache:'no-cache'}); if (r.ok) return r.json(); }
+  catch(e) { console.error('CDN:', file, e.message); }
   return null;
 }
 
@@ -1088,20 +1083,7 @@ function renderReports(reports) {
       1️⃣ 搜索股票 → 点 <b>📝分析</b><br>
       2️⃣ 股票详情 → 点 <b>📝 一键分析</b><br>
       3️⃣ 对话输入「深度分析 招商银行」</small>
-      ${hiddenCount > 0 ? '<br><br><button class=\"btn\" onclick=\"_unhideAllReports();
-// ── 加载超时守护 (15秒后强制显示缓存/空状态) ────────────────────────
-var _loadTimeout = setTimeout(function() {
-  console.warn('⚠ 数据加载超时,尝试显示缓存数据');
-  try {
-    var cached = localStorage.getItem('stock_cache_v1');
-    if (cached) {
-      var data = JSON.parse(cached);
-      if (data.market) renderIndices(data.market.indices);
-      if (data.stocks) renderWatchlist(data.stocks, '缓存');
-    }
-  } catch(e) {}
-}, 15000);
-refreshAll();\" style=\"font-size:0.8em\">🔄 恢复 '+hiddenCount+' 份已隐藏报告</button>' : ''}
+      ${hiddenCount > 0 ? '<br><br><button class=\"btn\" onclick=\"_unhideAllReports();refreshAll();\" style=\"font-size:0.8em\">🔄 恢复 '+hiddenCount+' 份已隐藏报告</button>' : ''}
     </div>`;
     return;
   }
@@ -1863,17 +1845,6 @@ function updateClock() {
   document.getElementById('marketBadge').className = `market-badge ${ms.cls}`;
 }
 
-// ── 带重试的获取 ──────────────────────────────────────────────────────────
-async function _retry(url, n) {
-  n = n || 2;
-  for (var i = 0; i <= n; i++) {
-    var r = await get(url);
-    if (r !== null) return r;
-    if (i < n) await new Promise(function(resolve) { setTimeout(resolve, 1000); });
-  }
-  return null;
-}
-
 // ── 主刷新 ───────────────────────────────────────────────────────────────
 
 async function refreshAll() {
@@ -1895,12 +1866,12 @@ async function refreshAll() {
   }
 
   const start = Date.now();
-  // 使用 allSettled + 重试 避免单个API失败导致全部卡住
+  // 使用 allSettled 避免单个API失败导致全部卡住
   const results = await Promise.allSettled([
-    _retry(API.market),
-    _retry(API.watchlistLive),
-    _retry(API.analysis),
-    _retry(API.reports)
+    get(API.market),
+    get(API.watchlistLive),
+    get(API.analysis),
+    get(API.reports)
   ]);
   const elapsed = Date.now() - start;
 
