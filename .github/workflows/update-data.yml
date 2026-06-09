@@ -54,27 +54,25 @@ jobs:
           git config user.name "A股行情机器人"
           git config user.email "stock-bot@github.com"
 
-          # 暂存数据变更
-          git add dashboard/data/ index.html report.html standalone.html 2>/dev/null || true
-          git stash push -m "data-update" -- dashboard/data/ index.html report.html standalone.html 2>/dev/null || true
+          # 1. 备份刚抓取的最新数据到临时目录
+          TMP_DATA=$(mktemp -d)
+          cp -r dashboard/data "$TMP_DATA/"
+          cp index.html report.html standalone.html "$TMP_DATA/" 2>/dev/null || true
 
-          # 切换 gh-pages
+          # 2. 切换到 gh-pages
           git fetch origin gh-pages 2>/dev/null || true
           git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
           git pull origin gh-pages 2>/dev/null || true
 
-          # 用 master 的最新文件覆盖 gh-pages
-          git checkout master -- dashboard/ index.html report.html standalone.html reports/ 2>/dev/null || true
-          cp dashboard/public/index.html index.html 2>/dev/null || true
-          cp dashboard/public/report.html report.html 2>/dev/null || true
-          cp dashboard/public/standalone.html standalone.html 2>/dev/null || true
+          # 3. 用备份的最新数据覆盖 gh-pages
+          cp -r "$TMP_DATA/data/"* dashboard/data/ 2>/dev/null || true
+          cp "$TMP_DATA"/index.html index.html 2>/dev/null || true
+          cp "$TMP_DATA"/report.html report.html 2>/dev/null || true
+          cp "$TMP_DATA"/standalone.html standalone.html 2>/dev/null || true
+          rm -rf "$TMP_DATA"
 
-          # 提交并推送
-          git add dashboard/data/ dashboard/public/ index.html report.html standalone.html reports/ 2>/dev/null || true
-          if git diff --staged --quiet && git diff --quiet; then
-            echo "无变更"
-          else
-            git commit -m "📊 行情数据更新 $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')"
-          fi
+          # 4. 提交并推送 gh-pages（始终提交，确保数据更新）
+          git add dashboard/data/ index.html report.html standalone.html 2>/dev/null || true
+          git commit -m "📊 行情数据更新 $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')" || echo "数据无变化，跳过提交"
           git push origin gh-pages || echo "推送失败，重试中..."
           echo "✅ gh-pages 同步完成"
