@@ -2126,23 +2126,6 @@ function updateRefreshBadge() {
   else btn.textContent = '🔄 ' + Math.floor(secs/60) + ':' + String(secs%60).padStart(2,'0');
 }
 
-// ── 缓存预加载: 立即显示上次数据, 消除加载闪烁 ──────────────────────────
-(function _preloadCache(){
-  try {
-    var raw = localStorage.getItem('stock_cache_v1');
-    if (!raw) return;
-    var cache = JSON.parse(raw);
-    // 缓存2小时内有效
-    if (Date.now() - cache.ts > 7200000) return;
-    if (cache.market) {
-      renderIndices(cache.market.indices);
-      renderSectors(cache.market.sectors);
-      if (cache.market.trending) renderTrending(cache.market.trending);
-    }
-    if (cache.stocks) renderWatchlist(cache.stocks, '缓存');
-    console.log('📦 缓存预加载完成');
-  } catch(e) {}
-})();
 updateClock();
 setInterval(updateClock, 1000);
 refreshAll();
