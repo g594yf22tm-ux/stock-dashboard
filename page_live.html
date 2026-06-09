@@ -670,7 +670,7 @@
   </style>
 </head>
 <body>
-<div id="errLog" style="display:none;background:rgba(244,63,94,0.1);border-bottom:2px solid #f43f5e;padding:4px 12px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:12px"></div>
+
 <!-- 顶部导航 -->
 <div class="header">
   <div class="header-brand">
@@ -2004,9 +2004,9 @@ function updateClock() {
 // ── 主刷新 ───────────────────────────────────────────────────────────────
 
 async function refreshAll() {
-  try {
   const btn = document.getElementById('refreshBtn');
-  if (btn) { btn.textContent = '⏳ ...'; btn.disabled = true; }
+  btn.textContent = '⏳ ...';
+  btn.disabled = true;
 
   // CDN模式: 加载扩展行情数据
   if (isRemote) {
@@ -2066,9 +2066,9 @@ async function refreshAll() {
     }));
   } catch(e) {}
   updateClock();
-  if (btn) { btn.textContent = '✅ ' + elapsed + 'ms'; btn.disabled = false; }
+  btn.textContent = '✅ ' + elapsed + 'ms';
+  btn.disabled = false;
   setTimeout(() => updateRefreshBadge(), 2000);
-  } catch(e) { console.error('refreshAll error:', e); try { var b=document.getElementById('refreshBtn'); if(b){b.textContent='❌ 出错';b.disabled=false;} } catch(e2){} }
 }
 
 // ── 快捷键 + 回到顶部 ──────────────────────────────────────────────────
@@ -2128,7 +2128,7 @@ function updateRefreshBadge() {
 
 updateClock();
 setInterval(updateClock, 1000);
-try { refreshAll(); } catch(e) { console.error('refreshAll error:', e); }
+refreshAll();
 startSmartRefresh();
 </script>
   <script src="report-modal.js" defer></script>
