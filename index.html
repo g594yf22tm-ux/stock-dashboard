@@ -670,7 +670,7 @@
   </style>
 </head>
 <body>
-
+<div id="errLog" style="display:none;background:rgba(244,63,94,0.1);border-bottom:2px solid #f43f5e;padding:4px 12px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:12px"></div>
 <!-- 顶部导航 -->
 <div class="header">
   <div class="header-brand">
@@ -812,6 +812,14 @@
 </div>
 
 <script>
+// ── 错误诊断 (开发调试用) ────────────────────────────────────────────────
+window._errors = [];
+window.onerror = function(msg, src, line, col, err) {
+  window._errors.push({msg: String(msg), line: line, col: col});
+  var el = document.getElementById('errLog');
+  if (el) { el.style.display='block'; el.innerHTML += '<div>⚠️ L'+line+': '+String(msg).substring(0,120)+'</div>'; }
+  return false;
+};
 // ── API ──────────────────────────────────────────────────────────────────
 const API = {
   market: '/api/market',
