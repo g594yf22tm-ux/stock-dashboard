@@ -812,14 +812,6 @@
 </div>
 
 <script>
-// ── 错误诊断 (开发调试用) ────────────────────────────────────────────────
-window._errors = [];
-window.onerror = function(msg, src, line, col, err) {
-  window._errors.push({msg: String(msg), line: line, col: col});
-  var el = document.getElementById('errLog');
-  if (el) { el.style.display='block'; el.innerHTML += '<div>⚠️ L'+line+': '+String(msg).substring(0,120)+'</div>'; }
-  return false;
-};
 // ── API ──────────────────────────────────────────────────────────────────
 const API = {
   market: '/api/market',
@@ -2012,9 +2004,9 @@ function updateClock() {
 // ── 主刷新 ───────────────────────────────────────────────────────────────
 
 async function refreshAll() {
+  try {
   const btn = document.getElementById('refreshBtn');
-  btn.textContent = '⏳ ...';
-  btn.disabled = true;
+  if (btn) { btn.textContent = '⏳ ...'; btn.disabled = true; }
 
   // CDN模式: 加载扩展行情数据
   if (isRemote) {
@@ -2074,9 +2066,9 @@ async function refreshAll() {
     }));
   } catch(e) {}
   updateClock();
-  btn.textContent = '✅ ' + elapsed + 'ms';
-  btn.disabled = false;
+  if (btn) { btn.textContent = '✅ ' + elapsed + 'ms'; btn.disabled = false; }
   setTimeout(() => updateRefreshBadge(), 2000);
+  } catch(e) { console.error('refreshAll error:', e); try { var b=document.getElementById('refreshBtn'); if(b){b.textContent='❌ 出错';b.disabled=false;} } catch(e2){} }
 }
 
 // ── 快捷键 + 回到顶部 ──────────────────────────────────────────────────
@@ -2136,7 +2128,7 @@ function updateRefreshBadge() {
 
 updateClock();
 setInterval(updateClock, 1000);
-refreshAll();
+try { refreshAll(); } catch(e) { console.error('refreshAll error:', e); }
 startSmartRefresh();
 </script>
   <script src="report-modal.js" defer></script>
