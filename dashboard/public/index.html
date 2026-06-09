@@ -670,7 +670,6 @@
   </style>
 </head>
 <body>
-<div id="errLog" style="display:none;background:rgba(244,63,94,0.1);border-bottom:2px solid #f43f5e;padding:4px 12px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:12px"></div>
 <!-- 顶部导航 -->
 <div class="header">
   <div class="header-brand">
@@ -812,6 +811,11 @@
 </div>
 
 <script>
+// 进度指示
+var _d=document.createElement('div');_d.id='_debug';_d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#0a0a0a;color:#0f0;font:10px monospace;padding:2px 6px;max-height:80px;overflow-y:auto;border-bottom:1px solid #333';
+document.body.appendChild(_d);
+function _log(m){var e=document.getElementById('_debug');if(e){e.innerHTML+=m+'<br>';e.scrollTop=e.scrollHeight;}}
+_log('1️⃣ 脚本开始');
 // ── API ──────────────────────────────────────────────────────────────────
 const API = {
   market: '/api/market',
@@ -2022,6 +2026,7 @@ async function refreshAll() {
   }
 
   const start = Date.now();
+  _log('  🔄 开始并行获取数据...');
   // 使用 allSettled 避免单个API失败导致全部卡住
   const results = await Promise.allSettled([
     get(API.market),
@@ -2030,6 +2035,7 @@ async function refreshAll() {
     get(API.reports)
   ]);
   const elapsed = Date.now() - start;
+  _log('  📡 数据获取完成 '+elapsed+'ms');
 
   const [market, live, analysis, reports] = results.map(r => r.status === 'fulfilled' ? r.value : null);
 
@@ -2126,10 +2132,13 @@ function updateRefreshBadge() {
   else btn.textContent = '🔄 ' + Math.floor(secs/60) + ':' + String(secs%60).padStart(2,'0');
 }
 
+_log('2️⃣ 准备启动刷新');
 updateClock();
 setInterval(updateClock, 1000);
-try { refreshAll(); } catch(e) { console.error('refreshAll error:', e); }
+_log('3️⃣ 调用refreshAll...');
+try { refreshAll().then(function(){_log('5️⃣ refreshAll完成');}).catch(function(e){_log('❌ refreshAll rejected: '+e);}); } catch(e) { _log('❌ refreshAll throw: '+e); }
 startSmartRefresh();
+_log('4️⃣ startSmartRefresh已启动');
 </script>
   <script src="report-modal.js" defer></script>
 
