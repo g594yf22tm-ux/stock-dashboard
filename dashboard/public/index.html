@@ -342,44 +342,6 @@
     .news-item:last-child { border-bottom: none; }
     .news-item a { color: var(--text); text-decoration: none; font-size: 0.9em; }
     .news-item a:hover { color: var(--primary); }
-    /* 详情标签页 */
-    .detail-tabs {
-      display: flex; gap: 0; border-bottom: 2px solid var(--border);
-      margin-bottom: 16px;
-    }
-    .detail-tab {
-      padding: 8px 20px; font-size: 0.85em; font-weight: 600;
-      cursor: pointer; border: none; background: none;
-      color: var(--muted); border-bottom: 2px solid transparent;
-      margin-bottom: -2px; transition: all 0.15s;
-    }
-    .detail-tab:hover { color: var(--text); }
-    .detail-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-    /* 深度分析样式 */
-    .deep-section { margin-bottom: 18px; }
-    .deep-section h4 {
-      font-size: 0.85em; font-weight: 700; color: var(--muted);
-      margin-bottom: 10px; border-left: 3px solid var(--primary); padding-left: 10px;
-    }
-    .deep-score-bar {
-      display: flex; align-items: center; gap: 8px; margin: 4px 0;
-    }
-    .deep-score-label { width: 55px; font-size: 0.8em; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
-    .deep-score-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-    .deep-score-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-    .deep-score-val { width: 32px; font-size: 0.85em; font-weight: 700; text-align: left; }
-    .deep-risk-tag {
-      display: inline-block; padding: 3px 10px; border-radius: 4px;
-      font-size: 0.75em; margin: 2px 4px;
-      background: rgba(244,63,94,0.08); color: var(--up-bright);
-      border: 1px solid rgba(244,63,94,0.15);
-    }
-    .deep-report-link {
-      display: block; padding: 8px 12px; border-radius: 6px;
-      background: var(--surface2); color: var(--text); text-decoration: none;
-      font-size: 0.85em; margin: 4px 0; transition: background 0.15s;
-    }
-    .deep-report-link:hover { background: var(--hover); }
     .news-item .news-meta { font-size: 0.75em; color: var(--muted); margin-top: 4px; }
     .detail-loading { text-align: center; padding: 30px; color: var(--muted); }
 
@@ -670,6 +632,7 @@
   </style>
 </head>
 <body>
+
 <!-- 顶部导航 -->
 <div class="header">
   <div class="header-brand">
@@ -811,11 +774,6 @@
 </div>
 
 <script>
-// 进度指示
-var _d=document.createElement('div');_d.id='_debug';_d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#0a0a0a;color:#0f0;font:10px monospace;padding:2px 6px;max-height:80px;overflow-y:auto;border-bottom:1px solid #333';
-document.body.appendChild(_d);
-function _log(m){var e=document.getElementById('_debug');if(e){e.innerHTML+=m+'<br>';e.scrollTop=e.scrollHeight;}}
-_log('1️⃣ 脚本开始');
 // ── API ──────────────────────────────────────────────────────────────────
 const API = {
   market: '/api/market',
@@ -872,7 +830,7 @@ async function get(url) {
         // 转换数据格式兼容现有渲染
         if (url===API.watchlistLive) return { stocks: data.stocks||[], trending: [], source: 'CDN', timestamp: data.timestamp };
         if (url===API.watchlist) return data;
-        if (url===API.analysis) { _analysisCache = data.analyses || null; return { recommendations: (data.analyses||[]).map(a=>({ticker:a.ticker,name:a.name,fundamentalView:a.fundamental?.view||'',technicalView:a.technical?.view||'',riskView:(a.risks||[]).join('；'),recommendation:a.recommendation?.signal||'HOLD',scores:{fundamental:(a.fundamental?.signalStrength||(a.technical?.signalStrength||0.5))*9,technical:(a.technical?.signalStrength||0.5)*10,risk:((a.technical?.signalStrength||0.5)*9)}}))}; }
+        if (url===API.analysis) return { recommendations: (data.analyses||[]).map(a=>({ticker:a.ticker,name:a.name,fundamentalView:a.fundamental?.view||'',technicalView:a.technical?.view||'',riskView:(a.risks||[]).join('；'),recommendation:a.recommendation?.signal||'HOLD',scores:{fundamental:(a.fundamental?.signalStrength||(a.technical?.signalStrength||0.5))*9,technical:(a.technical?.signalStrength||0.5)*10,risk:((a.technical?.signalStrength||0.5)*9)}}))};
         return data; // market.json as-is
       }
       return null;
@@ -973,7 +931,6 @@ function renderSparkline(data, chgPct) {
 }
 
 let _watchlistData = []; // 缓存原始数据用于排序
-let _analysisCache = null; // 缓存分析数据用于深度分析
 
 function renderWatchlist(stocks, source) {
   _watchlistData = stocks || [];
@@ -1597,11 +1554,6 @@ function showStockDetailCDN(s) {
         <button class="detail-close" onclick="closeDetail()">✕</button>
       </div>
     </div>
-    <div class="detail-tabs">
-      <button class="detail-tab active" onclick="_switchDetailTab(this,'tab-quote','${s.ticker.replace(/'/g,"\\'")}')">📊 实时行情</button>
-      <button class="detail-tab" onclick="_switchDetailTab(this,'tab-deep','${s.ticker.replace(/'/g,"\\'")}')">🔬 深度分析</button>
-    </div>
-    <div id="tab-quote" class="detail-tab-content">
     ${hasData ? `
     <div class="detail-price">
       <span class="dp-main">¥${F.price(s.price)}</span>
@@ -1633,7 +1585,7 @@ function showStockDetailCDN(s) {
         <span style="font-size:1.2em;font-weight:700;color:${sigColor}">${sigScore}分</span>
       </div>
     </div>
-    ` : '<div class="detail-loading" style="padding:20px;text-align:center;color:var(--muted)">该股票暂不在关注列表中，无实时行情数据<br><small>仅显示基本信息</small></div>'}
+    ` : `<div class="detail-loading" style="padding:20px;text-align:center;color:var(--muted)">该股票暂不在关注列表中，无实时行情数据<br><small>仅显示基本信息</small></div>`}
     <div class="detail-section">
       <div class="ds-title">📰 新闻 & 外部链接</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
@@ -1645,102 +1597,6 @@ function showStockDetailCDN(s) {
     </div>
     <div style="text-align:right;margin-top:12px">
       <span style="font-size:0.75em;color:var(--muted)">📡 CDN模式 · 行情≤10分钟延迟 · 仅供参考</span>
-    </div>
-    </div>
-    <div id="tab-deep" class="detail-tab-content" style="display:none"></div>`;
-}
-
-// ── 详情标签切换 ────────────────────────────────────────────────────────
-function _switchDetailTab(btn, tabId, ticker) {
-  // 更新标签激活状态
-  document.querySelectorAll('.detail-tab').forEach(function(t){ t.classList.remove('active'); });
-  btn.classList.add('active');
-  // 切换内容
-  document.querySelectorAll('.detail-tab-content').forEach(function(c){ c.style.display='none'; });
-  var target = document.getElementById(tabId);
-  if (target) target.style.display = '';
-  // 深度分析标签: 按需加载
-  if (tabId === 'tab-deep' && ticker && !target.innerHTML.trim()) {
-    _renderDeepAnalysis(target, ticker);
-  }
-}
-
-// ── 深度分析渲染 ────────────────────────────────────────────────────────
-function _renderDeepAnalysis(container, ticker) {
-  var code = ticker.replace('.SS','').replace('.SZ','');
-  var s = (_watchlistData||[]).find(function(d){ return d.ticker === ticker; });
-  var a = (_analysisCache||[]).find(function(d){ return d.ticker === ticker; });
-  var name = (s||{}).name || ticker;
-
-  // 综合评分
-  var techScore = a && a.technical ? Math.round((a.technical.signalStrength||0.5)*100) : 50;
-  var fundScore = a && a.fundamental ? Math.round((a.fundamental.signalStrength||0.5)*100) : 50;
-  var riskScore = a && a.technical ? Math.round(((a.technical.signalStrength||0.5)*0.7+0.15)*100) : 50;
-  var totalScore = Math.round((techScore + fundScore + riskScore) / 3);
-
-  var recomSignal = (a&&a.recommendation&&a.recommendation.signal) || (s&&s.signal&&s.signal.signal) || 'HOLD';
-  var recomConf = a&&a.recommendation ? Math.round((a.recommendation.confidence||0.5)*100) : (s&&s.signal ? s.signal.score : 50);
-  var sigLabels = { BUY:'🟢 看多', HOLD:'🟡 观望', WATCH:'🔴 回避', SELL:'⚫ 看空' };
-  var sigColors = { BUY:'var(--down-bright)', HOLD:'var(--accent)', WATCH:'var(--up-bright)', SELL:'var(--muted)' };
-
-  var bar = function(v,color){ if(!color) color=v>=70?'var(--down-bright)':v>=50?'var(--accent)':'var(--up-bright)'; return '<div class=\"deep-score-bar\"><div class=\"deep-score-track\"><div class=\"deep-score-fill\" style=\"width:'+v+'%;background:'+color+'\"></div></div><span class=\"deep-score-val\" style=\"color:'+color+'\">'+v+'</span></div>'; };
-
-  var riskTags = (a&&a.risks ? a.risks : ['市场系统性风险','个股波动风险','行业周期风险','流动性风险']).map(function(r){ return '<span class=\"deep-risk-tag\">'+r+'</span>'; }).join('');
-
-  // 查找关联报告
-  var reports = (EMBEDDED_REPORTS||[]).filter(function(r){ return r.filename.indexOf(code) === 0; });
-  var reportHTML = reports.length ? reports.map(function(r){ return '<a class=\"deep-report-link\" href=\"#\" onclick=\"openReportInline(\\''+encodeURIComponent(r.filename)+'\\',\\''+ticker+'\\',\\''+name+'\\');return false;\">📄 '+r.title+' ('+r.date+')</a>'; }).join('') : '<div style=\"color:var(--muted);font-size:0.85em\">暂无深度研报<br><small>通过Claude Code生成: 输入「深度分析 '+name+'」</small></div>';
-
-  // 目标价计算
-  var targetPrice = s&&s.targetPrice ? s.targetPrice : null;
-  var price = s&&s.price ? s.price : 0;
-  var potential = targetPrice&&price ? ((targetPrice/price-1)*100).toFixed(1)+'%' : '—';
-  var targetColor = targetPrice&&price ? (targetPrice>=price?'var(--down-bright)':'var(--up-bright)') : 'var(--muted)';
-
-  container.innerHTML = `
-    <div class="deep-section">
-      <h4>📊 综合评分 · ${name}</h4>
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;padding:12px;background:var(--surface2);border-radius:8px">
-        <div style="text-align:center">
-          <div style="font-size:2em;font-weight:700;color:${sigColors[recomSignal]||'var(--muted)'}">${totalScore}</div>
-          <div style="font-size:0.7em;color:var(--muted)">综合分</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.4em;font-weight:700;color:${sigColors[recomSignal]||'var(--muted)'}">${sigLabels[recomSignal]||recomSignal}</div>
-          <div style="font-size:0.7em;color:var(--muted)">建议</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.4em;font-weight:700">${recomConf}%</div>
-          <div style="font-size:0.7em;color:var(--muted)">置信度</div>
-        </div>
-        <div style="flex:1">
-          <div class="deep-score-bar"><span class="deep-score-label">技术面</span>${bar(techScore)}</div>
-          <div class="deep-score-bar"><span class="deep-score-label">基本面</span>${bar(fundScore)}</div>
-          <div class="deep-score-bar"><span class="deep-score-label">风险</span>${bar(riskScore)}</div>
-        </div>
-      </div>
-    </div>
-    <div class="deep-section">
-      <h4>📈 技术面分析</h4>
-      <p style="font-size:0.85em;line-height:1.6;color:var(--text-secondary)">${a&&a.technical&&a.technical.view ? a.technical.view : (s&&s.signal ? '当日信号: '+s.signal.text+' (评分 '+s.signal.score+'/100)。' : '暂无技术面分析数据。')} ${s&&s.price ? '当前价格 ¥'+s.price.toFixed(2)+'，'+(s.changePercent>=0?'上涨':'下跌')+s.changePercent?.toFixed(2)+'%。' : ''}</p>
-    </div>
-    <div class="deep-section">
-      <h4>💰 基本面分析</h4>
-      ${targetPrice ? '<div style=\"display:flex;gap:24px;margin-bottom:8px\"><div><span style=\"font-size:0.75em;color:var(--muted)\">目标价</span><br><span style=\"font-size:1.2em;font-weight:700\">¥'+targetPrice.toFixed(2)+'</span></div><div><span style=\"font-size:0.75em;color:var(--muted)\">现价</span><br><span style=\"font-size:1.2em;font-weight:700\">¥'+ (price||0).toFixed(2)+'</span></div><div><span style=\"font-size:0.75em;color:var(--muted)\">潜在空间</span><br><span style=\"font-size:1.2em;font-weight:700;color:'+targetColor+'\">'+potential+'</span></div></div>' : ''}
-      <p style="font-size:0.85em;line-height:1.6;color:var(--text-secondary)">${a&&a.fundamental&&a.fundamental.view ? a.fundamental.view : (s&&s.reason ? s.reason : '暂无基本面分析数据。')}</p>
-    </div>
-    <div class="deep-section">
-      <h4>⚠️ 风险评估</h4>
-      <div style="margin-bottom:8px">${riskTags}</div>
-      <p style="font-size:0.8em;color:var(--muted)">以上风险因素基于当前市场环境和个股特征识别，请结合自身风险承受能力综合判断。</p>
-    </div>
-    <div class="deep-section">
-      <h4>📄 关联研报</h4>
-      ${reportHTML}
-    </div>
-    <div class="deep-section" style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
-      <span style="font-size:0.82em;color:var(--muted)">💡 生成完整深度报告：在Claude Code中输入</span>
-      <code style="display:block;margin:8px auto;padding:6px 16px;background:var(--bg);border-radius:4px;font-size:0.9em;color:var(--primary)">深度分析 ${name} (${ticker})</code>
     </div>`;
 }
 
@@ -2008,9 +1864,9 @@ function updateClock() {
 // ── 主刷新 ───────────────────────────────────────────────────────────────
 
 async function refreshAll() {
-  try {
   const btn = document.getElementById('refreshBtn');
-  if (btn) { btn.textContent = '⏳ ...'; btn.disabled = true; }
+  btn.textContent = '⏳ ...';
+  btn.disabled = true;
 
   // CDN模式: 加载扩展行情数据
   if (isRemote) {
@@ -2026,7 +1882,6 @@ async function refreshAll() {
   }
 
   const start = Date.now();
-  _log('  🔄 开始并行获取数据...');
   // 使用 allSettled 避免单个API失败导致全部卡住
   const results = await Promise.allSettled([
     get(API.market),
@@ -2035,7 +1890,6 @@ async function refreshAll() {
     get(API.reports)
   ]);
   const elapsed = Date.now() - start;
-  _log('  📡 数据获取完成 '+elapsed+'ms');
 
   const [market, live, analysis, reports] = results.map(r => r.status === 'fulfilled' ? r.value : null);
 
@@ -2072,9 +1926,9 @@ async function refreshAll() {
     }));
   } catch(e) {}
   updateClock();
-  if (btn) { btn.textContent = '✅ ' + elapsed + 'ms'; btn.disabled = false; }
+  btn.textContent = '✅ ' + elapsed + 'ms';
+  btn.disabled = false;
   setTimeout(() => updateRefreshBadge(), 2000);
-  } catch(e) { console.error('refreshAll error:', e); try { var b=document.getElementById('refreshBtn'); if(b){b.textContent='❌ 出错';b.disabled=false;} } catch(e2){} }
 }
 
 // ── 快捷键 + 回到顶部 ──────────────────────────────────────────────────
@@ -2132,13 +1986,10 @@ function updateRefreshBadge() {
   else btn.textContent = '🔄 ' + Math.floor(secs/60) + ':' + String(secs%60).padStart(2,'0');
 }
 
-_log('2️⃣ 准备启动刷新');
 updateClock();
 setInterval(updateClock, 1000);
-_log('3️⃣ 调用refreshAll...');
-try { refreshAll().then(function(){_log('5️⃣ refreshAll完成');}).catch(function(e){_log('❌ refreshAll rejected: '+e);}); } catch(e) { _log('❌ refreshAll throw: '+e); }
+refreshAll();
 startSmartRefresh();
-_log('4️⃣ startSmartRefresh已启动');
 </script>
   <script src="report-modal.js" defer></script>
 
