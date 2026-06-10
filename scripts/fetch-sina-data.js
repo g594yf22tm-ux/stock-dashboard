@@ -404,6 +404,54 @@ async function main() {
     }
   }
 
+  // ── 抓取A股市场要闻（新浪财经）────────────────────────────────────────
+  console.log('\n📰 抓取市场要闻...');
+  let marketNews = [];
+  try {
+    const newsUrl = 'https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2512&k=A股&num=10&page=1';
+    const newsText = await httpGet(newsUrl);
+    const newsData = JSON.parse(newsText);
+    if (newsData && newsData.result && newsData.result.data) {
+      marketNews = newsData.result.data.slice(0, 8).map(n => {
+        const ts = parseInt(n.ctime) * 1000 || Date.now();
+        const d = new Date(ts);
+        const timeStr = (d.getMonth()+1)+'-'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+        return {
+          title: (n.title || '').replace(/<[^>]+>/g, ''),
+          time: timeStr,
+          source: n.media_name || '新浪财经',
+          url: n.url || ''
+        };
+      }).filter(n => n.title && n.url);
+    }
+  } catch (e) { console.error('⚠️ 新闻抓取失败:', e.message); }
+  console.log('✅ 市场要闻: '+marketNews.length+' 条');
+
+  // 写入新闻数据
+  const newsData = {
+    timestamp: new Date().toISOString(),
+    source: '新浪财经',
+    marketNews: marketNews,
+    // 股票外部链接映射（前端据此展示个股新闻入口）
+    stockLinks: Object.fromEntries(stockData.slice(0, 10).map(s => {
+      const code = s.ticker.replace('.SS','').replace('.SZ','');
+      const mkt = s.ticker.endsWith('.SS') ? 'sh' : 'sz';
+      return [s.ticker, {
+        sina: `https://finance.sina.com.cn/realstock/company/${mkt}${code}/nc.shtml`,
+        eastmoney: `https://guba.eastmoney.com/list,${code}.html`,
+        baidu: `https://www.baidu.com/s?wd=${encodeURIComponent(s.name)}+${code}+股票新闻`,
+        xueqiu: `https://xueqiu.com/S/${mkt}${code}`
+      }];
+    }))
+  };
+
+  fs.writeFileSync(
+    path.join(DATA_DIR, 'news.json'),
+    JSON.stringify(newsData, null, 2),
+    'utf8'
+  );
+  console.log('✅ 新闻数据已保存');
+
   // 打印摘要
   console.log('\n📊 行情摘要:');
   console.log('─'.repeat(50));
