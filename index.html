@@ -692,6 +692,10 @@
       <div class="card-title">🔥 热门关注</div>
       <div id="trendingList"><div class="loading">加载中...</div></div>
     </div>
+    <div class="card" id="marketNewsCard" style="display:none">
+      <div class="card-title">📰 市场要闻</div>
+      <div id="marketNewsList"></div>
+    </div>
   </div>
 
   <!-- 关注列表 -->
@@ -803,6 +807,7 @@ const CDN = './dashboard/data'; // 同源加载，绕过 jsDelivr 7天缓存
 
 // ── 预加载扩展行情（确保首次搜索就有实时价格）───────────────────────────
 let _extQuotes = {};
+let _newsCache = {}; // 新闻缓存
 if (isRemote) {
   fetchCDN('quotes_ext.json').then(data => {
     if (data && data.quotes) {
@@ -918,6 +923,17 @@ function renderTrending(trending) {
       <td>${F.vol(t.volume)}</td>
       <td>${(function(){ var amt=t.amount; if(!amt&&t.price&&t.volume) amt=t.price*t.volume; return amt?(amt/1e8).toFixed(2)+'亿':'—'; })()}</td>
     </tr>`).join('') + '</tbody></table>';
+}
+
+function renderMarketNews() {
+  var news = _newsCache.marketNews;
+  var el = document.getElementById('marketNewsList');
+  var card = document.getElementById('marketNewsCard');
+  if (!news || !news.length) { if(el) el.innerHTML='<div class=\"no-data\">暂无市场要闻</div>'; if(card) card.style.display=''; return; }
+  if(card) card.style.display='';
+  el.innerHTML = news.map(function(n){
+    return '<div class=\"news-item\" style=\"cursor:pointer\" onclick=\"window.open(\\''+n.url+'\\',\\'_blank\\')\"><a href=\"'+n.url+'\" target=\"_blank\">'+n.title+'</a><div class=\"news-meta\">'+n.source+' · '+n.time+'</div></div>';
+  }).join('');
 }
 
 function renderSparkline(data, chgPct) {
@@ -1587,7 +1603,22 @@ function showStockDetailCDN(s) {
     </div>
     ` : `<div class="detail-loading" style="padding:20px;text-align:center;color:var(--muted)">该股票暂不在关注列表中，无实时行情数据<br><small>仅显示基本信息</small></div>`}
     <div class="detail-section">
-      <div class="ds-title">📰 新闻 & 外部链接</div>
+      <div class="ds-title">📰 新闻</div>
+      ${(function(){
+        var news = _newsCache.marketNews;
+        if (news && news.length) {
+          return news.slice(0, 4).map(function(n){
+            return '<div class=\"news-item\"><a href=\"'+n.url+'\" target=\"_blank\" title=\"'+n.url+'\">'+n.title+'</a><div class=\"news-meta\">'+n.source+' '+n.time+'</div></div>';
+          }).join('');
+        }
+        return '<div style=\"color:var(--muted);font-size:0.85em\">市场要闻加载中...</div>';
+      })()}
+      <div style=\"margin-top:8px;font-size:0.78em\">
+        <a href=\"https://finance.sina.com.cn/realstock/company/${code}/nc.shtml\" target=\"_blank\" style=\"color:var(--primary)\">📰 ${s.name||''} 新浪专页 →</a>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="ds-title">🔗 外部链接</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
         <a href="https://finance.sina.com.cn/realstock/company/${code}/nc.shtml" target="_blank" class="btn" style="text-decoration:none;font-size:0.82em">📰 新浪个股</a>
         <a href="https://guba.eastmoney.com/list,${codeNum}.html" target="_blank" class="btn" style="text-decoration:none;font-size:0.82em">💬 股吧讨论</a>
@@ -1868,8 +1899,11 @@ async function refreshAll() {
   btn.textContent = '⏳ ...';
   btn.disabled = true;
 
-  // CDN模式: 加载扩展行情数据
+  // CDN模式: 加载扩展行情+新闻数据
   if (isRemote) {
+    fetchCDN('news.json').then(data => {
+      if (data) { _newsCache = data; console.log('新闻加载:', (data.marketNews||[]).length, '条要闻'); renderMarketNews(); }
+    }).catch(() => {});
     fetchCDN('quotes_ext.json').then(data => {
       if (data && data.quotes) {
         _extQuotes = {};

@@ -1,0 +1,100 @@
+// fix-analysis-v2.js — 修复转义问题，重新生成renderAnalysis
+const fs = require('fs');
+const f = 'f:/Claude code test/dashboard/public/index.html';
+let c = fs.readFileSync(f, 'utf8');
+
+const fnStart = c.indexOf('function renderAnalysis(recommendations) {');
+const fnEndMarker = "}).join('');";
+const fnEnd = c.indexOf(fnEndMarker, fnStart) + fnEndMarker.length;
+
+if (fnStart < 0) { console.log('NOT FOUND'); process.exit(1); }
+
+// Build function with PROPER escaping
+const lines = [];
+lines.push('function renderAnalysis(recommendations) {');
+lines.push('  const el = document.getElementById("analysisGrid");');
+lines.push('  if (!recommendations?.length) {');
+lines.push('    el.innerHTML = "<div class=\"no-data\" style=\"grid-column:1/-1\">暂无分析数据<br><small>运行 npm run init 生成分析</small></div>";');
+lines.push('    return;');
+lines.push('  }');
+lines.push('');
+lines.push('  const sorted = [...recommendations].sort((a,b) => {');
+lines.push('    const sa = (a.scores?.fundamental||0)+(a.scores?.technical||0)+(a.scores?.risk||0);');
+lines.push('    const sb = (b.scores?.fundamental||0)+(b.scores?.technical||0)+(b.scores?.risk||0);');
+lines.push('    return sb - sa;');
+lines.push('  });');
+lines.push('');
+lines.push('  for (let i = 0; i < sorted.length; i++) {');
+lines.push('    const r = sorted[i];');
+lines.push('    if (r._signalScore == null) {');
+lines.push('      const w = _watchlistData && _watchlistData.find(function(x){return x.ticker===r.ticker;});');
+lines.push('      r._signalScore = (w && w.signal) ? w.signal.score : (r.recommendation?.confidence || 0.5) * 100;');
+lines.push('    }');
+lines.push('  }');
+lines.push('');
+lines.push('  const sigLabels = { BUY:"看多", HOLD:"观望", WATCH:"回避", SELL:"看空" };');
+lines.push('  const sigIcons = { BUY:"🔴", HOLD:"🟡", WATCH:"🟢", SELL:"⚫" };');
+lines.push('');
+lines.push('  el.innerHTML = sorted.slice(0, 12).map(r => {');
+lines.push('    const sig = (r.recommendation?.signal || "HOLD").toUpperCase();');
+lines.push('    const sigCls = sig === "BUY" ? "buy" : sig === "WATCH" ? "watch" : "hold";');
+lines.push('    const score = r._signalScore || 50;');
+lines.push('    const conf = Math.round(score);');
+lines.push('');
+lines.push('    const fd = Math.round((r.scores?.fundamental || 5) * 10) / 10;');
+lines.push('    const td = Math.round((r.scores?.technical || 5) * 10) / 10;');
+lines.push('    const rd = Math.round((r.scores?.risk || 5) * 10) / 10;');
+lines.push('    const total = Math.round((fd + td + rd) / 3 * 10) / 10;');
+lines.push('');
+lines.push('    const barW = v => Math.min(100, Math.max(2, v * 10));');
+lines.push('    const barColor = v => v >= 8 ? "var(--up)" : v >= 6 ? "var(--accent)" : v >= 4 ? "var(--info)" : "var(--muted)";');
+lines.push('');
+lines.push('    const fundView = (r.fundamentalView || "").substring(0, 80) + ((r.fundamentalView||"").length > 80 ? "…" : "");');
+lines.push('    const techView = (r.technicalView || "").substring(0, 80) + ((r.technicalView||"").length > 80 ? "…" : "");');
+lines.push('    const riskView = (r.riskView || "").substring(0, 60) + ((r.riskView||"").length > 60 ? "…" : "");');
+lines.push('    const tickerEsc = (r.ticker||"").replace(/\'/g, "\\\'");');
+lines.push('    const nameEsc = (r.name||"").replace(/\'/g, "\\\'");');
+lines.push('');
+lines.push('    return "<div class=\\"analysis-card-v2 " + sigCls + "\\">" +');
+lines.push('      "<div class=\\"ac-header\\">" +');
+lines.push('        "<div class=\\"ac-title\\" onclick=\\"showStockDetail(\'"+r.ticker+"\')\\" title=\\"点击查看实时行情\\">" +');
+lines.push('          "<span class=\\"ac-name\\">" + (r.name || r.ticker) + "</span>" +');
+lines.push('          "<span class=\\"ac-ticker\\">" + r.ticker + "</span>" +');
+lines.push('        "</div>" +');
+lines.push('        "<div class=\\"ac-verdict\\">" +');
+lines.push('          "<span class=\\"ac-signal-badge " + sigCls + "\\">" + (sigIcons[sig]||"") + " " + (sigLabels[sig]||sig) + "</span>" +');
+lines.push('          "<span class=\\"ac-total\\" style=\\"color:" + barColor(total) + "\\">" + total.toFixed(1) + "</span>" +');
+lines.push('          "<span class=\\"ac-total-label\\">综合分</span>" +');
+lines.push('        "</div>" +');
+lines.push('      "</div>" +');
+lines.push('');
+lines.push('      "<div class=\\"ac-body\\">" +');
+lines.push('        (fundView ? "<div class=\\"ac-line\\"><span class=\\"ac-role\\">📊 基本面</span><span class=\\"ac-text\\">" + fundView + "</span></div>" : "") +');
+lines.push('        (techView ? "<div class=\\"ac-line\\"><span class=\\"ac-role\\">📈 技术面</span><span class=\\"ac-text\\">" + techView + "</span></div>" : "") +');
+lines.push('        (riskView ? "<div class=\\"ac-line\\"><span class=\\"ac-role\\">🛡️ 风险</span><span class=\\"ac-text\\">" + riskView + "</span></div>" : "") +');
+lines.push('      "</div>" +');
+lines.push('');
+lines.push('      "<div class=\\"ac-scores\\">" +');
+lines.push('        "<div class=\\"ac-score-row\\"><span class=\\"ac-score-label\\">基本面</span><div class=\\"ac-bar-track\\"><div class=\\"ac-bar-fill\\" style=\\"width:" + barW(fd) + "%;background:" + barColor(fd) + "\\"></div></div><span class=\\"ac-score-val\\" style=\\"color:" + barColor(fd) + "\\">" + fd.toFixed(1) + "</span></div>" +');
+lines.push('        "<div class=\\"ac-score-row\\"><span class=\\"ac-score-label\\">技术面</span><div class=\\"ac-bar-track\\"><div class=\\"ac-bar-fill\\" style=\\"width:" + barW(td) + "%;background:" + barColor(td) + "\\"></div></div><span class=\\"ac-score-val\\" style=\\"color:" + barColor(td) + "\\">" + td.toFixed(1) + "</span></div>" +');
+lines.push('        "<div class=\\"ac-score-row\\"><span class=\\"ac-score-label\\">风  险</span><div class=\\"ac-bar-track\\"><div class=\\"ac-bar-fill\\" style=\\"width:" + barW(rd) + "%;background:" + barColor(rd) + "\\"></div></div><span class=\\"ac-score-val\\" style=\\"color:" + barColor(rd) + "\\">" + rd.toFixed(1) + "</span></div>" +');
+lines.push('      "</div>" +');
+lines.push('');
+lines.push('      "<div class=\\"ac-footer\\">" +');
+lines.push('        "<span class=\\"ac-confidence\\">置信度 <strong>" + conf + "%</strong></span>" +');
+lines.push('        "<div class=\\"ac-actions\\">" +');
+lines.push('          "<button class=\\"btn\\" style=\\"font-size:0.72em;padding:3px 10px\\" onclick=\\"event.stopPropagation();showStockDetail(\'"+tickerEsc+"\')\\">📈 行情</button>" +');
+lines.push('          "<button class=\\"btn\\" style=\\"font-size:0.72em;padding:3px 10px\\" onclick=\\"event.stopPropagation();openReportByTicker(\'"+tickerEsc+"\',\'"+nameEsc+"\')\\">📄 研报</button>" +');
+lines.push('        "</div>" +');
+lines.push('      "</div>" +');
+lines.push('    "</div>";');
+lines.push('  }).join("");');
+lines.push('}');
+
+const newFn = lines.join('\n');
+
+c = c.substring(0, fnStart) + newFn + c.substring(fnEnd);
+console.log('✓ renderAnalysis 已重写 (v2, 修复转义)');
+
+fs.writeFileSync(f, c);
+console.log('文件: ' + c.length + ' 字符');
