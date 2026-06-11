@@ -293,6 +293,93 @@ function analyzeRisk(stock, tech) {
   return risks.slice(0, 5);
 }
 
+// ── 高级指标计算 ─────────────────────────────────────────────────────────
+function calcAdvanced(kline, tech, stockPrice) {
+  const closes = kline.map(d => d.close);
+  const n = closes.length;
+  if (n < 20) return {};
+
+  // 动量 (多周期收益率)
+  const momentum = {
+    d5: n >= 5 ? ((closes[n-1] - closes[n-6]) / closes[n-6] * 100) : null,
+    d20: n >= 20 ? ((closes[n-1] - closes[n-21]) / closes[n-21] * 100) : null,
+    d60: n >= 60 ? ((closes[n-1] - closes[n-61]) / closes[n-61] * 100) : null
+  };
+
+  // 最大回撤
+  let peak = closes[0], maxDD = 0;
+  for (let i = 1; i < n; i++) {
+    if (closes[i] > peak) peak = closes[i];
+    const dd = (peak - closes[i]) / peak * 100;
+    if (dd > maxDD) maxDD = dd;
+  }
+
+  // 夏普比率 (无风险利率取2%)
+  const rf = 0.02;
+  const dailyRf = rf / 252;
+  const returns = [];
+  for (let i = n - 60; i < n; i++) returns.push((closes[i] - closes[i-1]) / closes[i-1] - dailyRf);
+  const avgRet = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const retStd = Math.sqrt(returns.reduce((s, r) => s + Math.pow(r - avgRet, 2), 0) / returns.length);
+  const sharpe = retStd > 0 ? (avgRet * 252) / (retStd * Math.sqrt(252)) : 0;
+
+  // 换手率估算 (成交量/流通股本 — 粗略)
+  const avgVol = kline.slice(-20).reduce((s, d) => s + d.volume, 0) / 20;
+  const turnover = stockPrice > 0 && avgVol > 0 ? (avgVol / 100000000 * 100).toFixed(1) : null;
+
+  // 涨跌比率
+  let upDays = 0;
+  for (let i = n - 20; i < n; i++) { if (closes[i] > closes[i-1]) upDays++; }
+  const upRatio = upDays / 20;
+
+  return { momentum, maxDrawdown: Math.round(maxDD * 10) / 10, sharpe: Math.round(sharpe * 100) / 100, turnover, upRatio: Math.round(upRatio * 100) };
+}
+
+// ── 股票分类 ─────────────────────────────────────────────────────────────
+function classify(tech, adv, fund) {
+  const classes = [];
+  const scores = {};
+
+  // 价值型: 低波动 + 目标价空间大
+  if (tech.volatility < 0.25 && fund.potential > 20) {
+    classes.push('价值洼地');
+    scores.value = Math.min(10, Math.round((fund.potential || 0) / 5 + (0.3 - tech.volatility) * 20));
+  }
+
+  // 成长型: 高动量 + 高波动
+  if (adv.momentum?.d20 > 5 && tech.volatility > 0.2) {
+    classes.push('成长动能');
+    scores.growth = Math.min(10, Math.round((adv.momentum.d20 || 0) / 3 + adv.upRatio * 5));
+  }
+
+  // 防御型: 低波动 + 低回撤
+  if (tech.volatility < 0.2 && adv.maxDrawdown < 15) {
+    classes.push('防御稳健');
+    scores.defensive = Math.min(10, Math.round(10 - tech.volatility * 30 - adv.maxDrawdown / 10));
+  }
+
+  // 动量型: 短期强势
+  if (adv.momentum?.d5 > 3 && adv.upRatio > 0.55) {
+    classes.push('动量强势');
+    scores.momentum = Math.min(10, Math.round((adv.momentum.d5 || 0) + adv.upRatio * 8));
+  }
+
+  // 高波动型
+  if (tech.volatility > 0.35) {
+    classes.push('高波动');
+    scores.highBeta = Math.round(tech.volatility * 20);
+  }
+
+  // 超跌反弹: 52周低位 + RSI<35
+  if (tech.position52w < 20 && tech.rsi < 35) {
+    classes.push('超跌反弹');
+  }
+
+  if (!classes.length) classes.push('震荡整理');
+
+  return { classes, scores };
+}
+
 // ── 主流程 ────────────────────────────────────────────────────────────────
 async function main() {
   console.log('🔬 专家分析引擎 v3.0');
@@ -331,13 +418,25 @@ async function main() {
     // 风险评估
     const risks = analyzeRisk({ ...q, ...cfg }, tech);
 
-    // 综合建议
-    const totalScore = Math.round((tech.techScore + fund.fundScore) / 2);
+    // 高级指标
+    const adv = calcAdvanced(kline, tech, q.price);
+
+    // 股票分类
+    const clf = classify(tech, adv, fund);
+
+    // 综合建议 (含动量调整)
+    let totalScore = Math.round((tech.techScore + fund.fundScore) / 2);
+    if (adv.momentum?.d20 > 10) totalScore += 5;
+    else if (adv.momentum?.d20 < -10) totalScore -= 5;
+    if (adv.sharpe > 1) totalScore += 5;
+    else if (adv.sharpe < -0.5) totalScore -= 5;
+    totalScore = Math.min(95, Math.max(10, totalScore));
+
     let signal, confidence;
-    if (totalScore >= 65) { signal = 'BUY'; confidence = Math.round(totalScore * 0.8 + 10); }
-    else if (totalScore >= 50) { signal = 'HOLD'; confidence = Math.round(totalScore * 0.7 + 15); }
-    else { signal = 'WATCH'; confidence = Math.round((100 - totalScore) * 0.7 + 10); }
-    confidence = Math.min(95, Math.max(30, confidence));
+    if (totalScore >= 65) { signal = 'BUY'; confidence = Math.round(totalScore * 0.8 + 5); }
+    else if (totalScore >= 50) { signal = 'HOLD'; confidence = Math.round(totalScore * 0.7 + 10); }
+    else { signal = 'WATCH'; confidence = Math.round((100 - totalScore) * 0.7 + 5); }
+    confidence = Math.min(95, Math.max(25, confidence));
 
     analyses.push({
       ticker: cfg.ticker,
@@ -347,11 +446,14 @@ async function main() {
         signalStrength: tech.techScore / 100,
         rsi: Math.round(tech.rsi * 10) / 10,
         macd: { value: Math.round(tech.macdVal * 100) / 100, signal: Math.round(tech.macdSignal * 100) / 100, histogram: Math.round(tech.macdHist * 100) / 100 },
-        ma5: Math.round(tech.ma5 * 100) / 100,
-        ma20: Math.round(tech.ma20 * 100) / 100,
+        ma5: Math.round(tech.ma5 * 100) / 100, ma20: Math.round(tech.ma20 * 100) / 100,
         ma60: Math.round(tech.ma60 * 100) / 100,
         bollinger: { upper: Math.round(tech.bbUpper * 100) / 100, middle: Math.round(tech.bbMid * 100) / 100, lower: Math.round(tech.bbLower * 100) / 100 },
         volatility: Math.round(tech.volatility * 1000) / 10,
+        momentum: { d5: adv.momentum?.d5 ? Math.round(adv.momentum.d5*10)/10 : null, d20: adv.momentum?.d20 ? Math.round(adv.momentum.d20*10)/10 : null, d60: adv.momentum?.d60 ? Math.round(adv.momentum.d60*10)/10 : null },
+        sharpe: adv.sharpe,
+        maxDrawdown: adv.maxDrawdown,
+        upRatio: adv.upRatio,
         volumeTrend: tech.volTrend,
         fiftyTwoWeek: { high: tech.high52w, low: tech.low52w, position: Math.round(tech.position52w) },
         view: tech.techView
@@ -365,19 +467,26 @@ async function main() {
       },
       risk: {
         volatility: tech.volatility ? Math.round(tech.volatility * 1000) / 10 : null,
+        sharpe: adv.sharpe,
+        maxDrawdown: adv.maxDrawdown,
         volumeTrend: tech.volTrend,
         specificRisks: risks,
-        view: `波动率${tech.volatility ? (tech.volatility*100).toFixed(1)+'%' : 'N/A'}，成交量${tech.volTrend}。`
+        view: `波动率${tech.volatility ? (tech.volatility*100).toFixed(1)+'%' : 'N/A'}，最大回撤${adv.maxDrawdown}%，夏普${adv.sharpe}。`
+      },
+      classification: {
+        labels: clf.classes,
+        scores: clf.scores,
+        primary: clf.classes[0] || '震荡整理'
       },
       recommendation: {
         signal,
         confidence,
         totalScore,
-        view: signal === 'BUY' ? '技术面偏多，建议关注' : signal === 'HOLD' ? '多空交织，观望为宜' : '技术面偏弱，注意风险'
+        view: signal === 'BUY' ? '多维度偏多，建议重点关注' : signal === 'HOLD' ? '多空交织，观望为宜' : '信号偏弱，注意风险'
       }
     });
 
-    console.log(` ✅ ${tech.techScore}分 ${signal}`);
+    console.log(` ✅ ${totalScore}分 ${signal} [${clf.classes.join(',')}]`);
   }
 
   // 按综合分排序
