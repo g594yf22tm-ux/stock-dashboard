@@ -43,6 +43,9 @@ jobs:
       - name: 🚀 抓取A股实时行情（新浪财经）
         run: node scripts/fetch-sina-data.js
 
+      - name: 🔬 增强分析（技术指标+分类）
+        run: node scripts/enhanced-analysis.js
+
       - name: 📄 同步仪表盘文件到根目录
         run: |
           cp dashboard/public/index.html index.html
