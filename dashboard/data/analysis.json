@@ -1,277 +1,748 @@
 {
-  "timestamp": "2026-06-11T15:42:51.686Z",
-  "source": "信号分析引擎 v2.0",
+  "timestamp": "2026-06-11T16:17:48.375Z",
+  "source": "分析引擎 v3.0 — 东方财富K线 + 新浪实时行情",
+  "engine": {
+    "indicators": [
+      "RSI(14)",
+      "MACD(12,26,9)",
+      "MA(5,20,60)",
+      "Bollinger(20,2)",
+      "Volatility(20d)"
+    ],
+    "dataSource": "东方财富 90日K线 + 新浪财经 实时行情",
+    "updateFrequency": "每30分钟"
+  },
   "analyses": [
     {
-      "ticker": "600031.SS",
-      "name": "三一重工",
+      "ticker": "600900.SS",
+      "name": "长江电力",
       "technical": {
-        "overallSignal": "bearish",
-        "signalStrength": 0.3,
-        "view": "当日信号: 弱势回避 (评分 30/100)。价格 ¥18.22，下跌 -3.34%。"
+        "overallSignal": "bullish",
+        "signalStrength": 0.65,
+        "rsi": 79.3,
+        "macd": {
+          "value": 0.23,
+          "signal": 0.2,
+          "histogram": 0.03
+        },
+        "ma5": 27.67,
+        "ma20": 27.35,
+        "ma60": 27.06,
+        "bollinger": {
+          "upper": 28.23,
+          "middle": 27.35,
+          "lower": 26.47
+        },
+        "volatility": 12.7,
+        "momentum": {
+          "d5": 0.6,
+          "d20": 3.5,
+          "d60": 1.7
+        },
+        "sharpe": 0.49,
+        "maxDrawdown": 4.1,
+        "upRatio": 55,
+        "volumeTrend": "温和缩量",
+        "fiftyTwoWeek": {
+          "high": 28.15,
+          "low": 25.38,
+          "position": 83
+        },
+        "view": "RSI 79.3 超买区域，MACD红柱，站上5/20日均线。"
       },
       "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 0.8149286498353456,
-        "view": "¥17.94, 1手¥1794。海外收入60%+，设备更新周期+基建回暖，周期底部布局 目标价 ¥22，潜在空间 20.7%。"
+        "overallSignal": "undervalued",
+        "signalStrength": 0.65,
+        "targetPrice": 32,
+        "potential": 15.565185987721186,
+        "view": "¥27.75, 1手¥2775。水电龙头现金流稳定，股息率3.5%+，类债券防御资产 目标价¥32，空间15.6%。"
       },
-      "insider": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.49
+      "risk": {
+        "volatility": 12.7,
+        "sharpe": 0.49,
+        "maxDrawdown": 4.1,
+        "volumeTrend": "温和缩量",
+        "specificRisks": [
+          "低波动(防御型)✅",
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "电价改革风险",
+          "来水量波动"
+        ],
+        "view": "波动率12.7%，最大回撤4.1%，夏普0.49。"
+      },
+      "classification": {
+        "labels": [
+          "防御稳健"
+        ],
+        "scores": {
+          "defensive": 6
+        },
+        "primary": "防御稳健"
       },
       "recommendation": {
-        "signal": "WATCH",
-        "confidence": 0.3
+        "signal": "BUY",
+        "confidence": 57,
+        "totalScore": 65,
+        "view": "多维度偏多，建议重点关注"
+      }
+    },
+    {
+      "ticker": "002027.SZ",
+      "name": "分众传媒",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.6,
+        "rsi": 41.1,
+        "macd": {
+          "value": -0.19,
+          "signal": -0.2,
+          "histogram": 0.01
+        },
+        "ma5": 5.35,
+        "ma20": 5.53,
+        "ma60": 6.09,
+        "bollinger": {
+          "upper": 5.84,
+          "middle": 5.53,
+          "lower": 5.22
+        },
+        "volatility": 21.9,
+        "momentum": {
+          "d5": -1.8,
+          "d20": -9.8,
+          "d60": -22.3
+        },
+        "sharpe": -3.91,
+        "maxDrawdown": 29.3,
+        "upRatio": 25,
+        "volumeTrend": "stable",
+        "fiftyTwoWeek": {
+          "high": 7.55,
+          "low": 5.26,
+          "position": 6
+        },
+        "view": "RSI 41.1 中性，MACD红柱，均线交织。"
       },
-      "risks": [
-        "原材料价格风险",
-        "流动性风险",
-        "行业周期风险",
-        "技术变革风险"
-      ]
+      "fundamental": {
+        "overallSignal": "undervalued",
+        "signalStrength": 0.7,
+        "targetPrice": 8,
+        "potential": 48.423005565862724,
+        "view": "¥5.58, 1手¥558。梯媒绝对龙头，经济复苏广告需求弹性大，股息率4%+ 目标价¥8，潜在空间48.4%。"
+      },
+      "risk": {
+        "volatility": 21.9,
+        "sharpe": -3.91,
+        "maxDrawdown": 29.3,
+        "volumeTrend": "stable",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "广告市场波动",
+          "监管风险"
+        ],
+        "view": "波动率21.9%，最大回撤29.3%，夏普-3.91。"
+      },
+      "classification": {
+        "labels": [
+          "价值洼地"
+        ],
+        "scores": {
+          "value": 10
+        },
+        "primary": "价值洼地"
+      },
+      "recommendation": {
+        "signal": "HOLD",
+        "confidence": 52,
+        "totalScore": 60,
+        "view": "多空交织，观望为宜"
+      }
+    },
+    {
+      "ticker": "600585.SS",
+      "name": "海螺水泥",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.6,
+        "rsi": 33.1,
+        "macd": {
+          "value": -0.64,
+          "signal": -0.61,
+          "histogram": -0.03
+        },
+        "ma5": 18.96,
+        "ma20": 19.62,
+        "ma60": 21.54,
+        "bollinger": {
+          "upper": 20.62,
+          "middle": 19.62,
+          "lower": 18.62
+        },
+        "volatility": 19.9,
+        "momentum": {
+          "d5": -3.4,
+          "d20": -11.6,
+          "d60": -26.7
+        },
+        "sharpe": -6.67,
+        "maxDrawdown": 29.6,
+        "upRatio": 30,
+        "volumeTrend": "stable",
+        "fiftyTwoWeek": {
+          "high": 26.93,
+          "low": 18.41,
+          "position": 4
+        },
+        "view": "RSI 33.1 中性，MACD绿柱，跌破5/20日均线。"
+      },
+      "fundamental": {
+        "overallSignal": "undervalued",
+        "signalStrength": 0.7,
+        "targetPrice": 26,
+        "potential": 38.445154419595305,
+        "view": "¥20.15, 1手¥2015。水泥龙头成本优势突出，高分红+低估值，基建稳增长受益 目标价¥26，潜在空间38.4%。"
+      },
+      "risk": {
+        "volatility": 19.9,
+        "sharpe": -6.67,
+        "maxDrawdown": 29.6,
+        "volumeTrend": "stable",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "地产需求下行",
+          "产能过剩"
+        ],
+        "view": "波动率19.9%，最大回撤29.6%，夏普-6.67。"
+      },
+      "classification": {
+        "labels": [
+          "价值洼地",
+          "超跌反弹"
+        ],
+        "scores": {
+          "value": 10
+        },
+        "primary": "价值洼地"
+      },
+      "recommendation": {
+        "signal": "HOLD",
+        "confidence": 49,
+        "totalScore": 55,
+        "view": "多空交织，观望为宜"
+      }
+    },
+    {
+      "ticker": "600036.SS",
+      "name": "招商银行",
+      "technical": {
+        "overallSignal": "bullish",
+        "signalStrength": 0.65,
+        "rsi": 72.6,
+        "macd": {
+          "value": 0.11,
+          "signal": -0.08,
+          "histogram": 0.18
+        },
+        "ma5": 38.64,
+        "ma20": 37.83,
+        "ma60": 38.74,
+        "bollinger": {
+          "upper": 39.22,
+          "middle": 37.83,
+          "lower": 36.45
+        },
+        "volatility": 12.9,
+        "momentum": {
+          "d5": 1.7,
+          "d20": 2.4,
+          "d60": -2.6
+        },
+        "sharpe": -0.84,
+        "maxDrawdown": 7.9,
+        "upRatio": 35,
+        "volumeTrend": "stable",
+        "fiftyTwoWeek": {
+          "high": 40.36,
+          "low": 36.78,
+          "position": 59
+        },
+        "view": "RSI 72.6 超买区域，MACD红柱，站上5/20日均线。"
+      },
+      "fundamental": {
+        "overallSignal": "undervalued",
+        "signalStrength": 0.55,
+        "targetPrice": 42,
+        "potential": 7.969151670951158,
+        "view": "¥38.01, 1手¥3801。零售银行之王，ROE行业最高，股息率5%+，防御配置首选 目标价¥42，空间有限(8.0%)。"
+      },
+      "risk": {
+        "volatility": 12.9,
+        "sharpe": -0.84,
+        "maxDrawdown": 7.9,
+        "volumeTrend": "stable",
+        "specificRisks": [
+          "低波动(防御型)✅",
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "净息差收窄",
+          "不良贷款风险"
+        ],
+        "view": "波动率12.9%，最大回撤7.9%，夏普-0.84。"
+      },
+      "classification": {
+        "labels": [
+          "防御稳健"
+        ],
+        "scores": {
+          "defensive": 5
+        },
+        "primary": "防御稳健"
+      },
+      "recommendation": {
+        "signal": "HOLD",
+        "confidence": 49,
+        "totalScore": 55,
+        "view": "多空交织，观望为宜"
+      }
+    },
+    {
+      "ticker": "600030.SS",
+      "name": "XD中信证",
+      "technical": {
+        "overallSignal": "neutral",
+        "signalStrength": 0.45,
+        "rsi": 44.2,
+        "macd": {
+          "value": -0.22,
+          "signal": -0.18,
+          "histogram": -0.04
+        },
+        "ma5": 25.56,
+        "ma20": 25.84,
+        "ma60": 25.79,
+        "bollinger": {
+          "upper": 26.46,
+          "middle": 25.84,
+          "lower": 25.21
+        },
+        "volatility": 17.2,
+        "momentum": {
+          "d5": -0.3,
+          "d20": -4.3,
+          "d60": -0.9
+        },
+        "sharpe": -0.11,
+        "maxDrawdown": 16.2,
+        "upRatio": 45,
+        "volumeTrend": "stable",
+        "fiftyTwoWeek": {
+          "high": 28.6,
+          "low": 23.77,
+          "position": 39
+        },
+        "view": "RSI 44.2 中性，MACD绿柱，均线交织。"
+      },
+      "fundamental": {
+        "overallSignal": "undervalued",
+        "signalStrength": 0.6,
+        "targetPrice": 30,
+        "potential": 16.913484021823844,
+        "view": "¥26.05, 1手¥2605。券商龙头，牛市高弹性，PB历史低位，成交活跃时爆发力强 目标价¥30，空间16.9%。"
+      },
+      "risk": {
+        "volatility": 17.2,
+        "sharpe": -0.11,
+        "maxDrawdown": 16.2,
+        "volumeTrend": "stable",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "市场成交量萎缩",
+          "监管政策变化"
+        ],
+        "view": "波动率17.2%，最大回撤16.2%，夏普-0.11。"
+      },
+      "classification": {
+        "labels": [
+          "震荡整理"
+        ],
+        "scores": {},
+        "primary": "震荡整理"
+      },
+      "recommendation": {
+        "signal": "HOLD",
+        "confidence": 47,
+        "totalScore": 53,
+        "view": "多空交织，观望为宜"
+      }
+    },
+    {
+      "ticker": "600438.SS",
+      "name": "通威股份",
+      "technical": {
+        "overallSignal": "neutral",
+        "signalStrength": 0.55,
+        "rsi": 29.3,
+        "macd": {
+          "value": -0.87,
+          "signal": -0.83,
+          "histogram": -0.04
+        },
+        "ma5": 13.57,
+        "ma20": 14.84,
+        "ma60": 16.51,
+        "bollinger": {
+          "upper": 16.92,
+          "middle": 14.84,
+          "lower": 12.76
+        },
+        "volatility": 40.4,
+        "momentum": {
+          "d5": 2.2,
+          "d20": -16.2,
+          "d60": -26.5
+        },
+        "sharpe": -3.23,
+        "maxDrawdown": 39.4,
+        "upRatio": 35,
+        "volumeTrend": "stable",
+        "fiftyTwoWeek": {
+          "high": 21.59,
+          "low": 12.69,
+          "position": 14
+        },
+        "view": "RSI 29.3 超卖区域，MACD绿柱，均线交织。"
+      },
+      "fundamental": {
+        "overallSignal": "undervalued",
+        "signalStrength": 0.7,
+        "targetPrice": 20,
+        "potential": 43.16392269148175,
+        "view": "¥14.77, 1手¥1477。硅料+电池双龙头，成本行业最低，行业出清后集中度提升受益最大 目标价¥20，潜在空间43.2%。"
+      },
+      "risk": {
+        "volatility": 40.4,
+        "sharpe": -3.23,
+        "maxDrawdown": 39.4,
+        "volumeTrend": "stable",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "产能过剩",
+          "补贴退坡"
+        ],
+        "view": "波动率40.4%，最大回撤39.4%，夏普-3.23。"
+      },
+      "classification": {
+        "labels": [
+          "高波动",
+          "超跌反弹"
+        ],
+        "scores": {
+          "highBeta": 8
+        },
+        "primary": "高波动"
+      },
+      "recommendation": {
+        "signal": "HOLD",
+        "confidence": 47,
+        "totalScore": 53,
+        "view": "多空交织，观望为宜"
+      }
     },
     {
       "ticker": "300015.SZ",
       "name": "爱尔眼科",
       "technical": {
         "overallSignal": "neutral",
-        "signalStrength": 0.63,
-        "view": "当日信号: 偏多 (评分 63/100)。价格 ¥8.41，上涨 1.94%。"
+        "signalStrength": 0.45,
+        "rsi": 30.5,
+        "macd": {
+          "value": -0.47,
+          "signal": -0.4,
+          "histogram": -0.08
+        },
+        "ma5": 8.35,
+        "ma20": 9.1,
+        "ma60": 9.74,
+        "bollinger": {
+          "upper": 10.33,
+          "middle": 9.1,
+          "lower": 7.86
+        },
+        "volatility": 28.8,
+        "momentum": {
+          "d5": -1.1,
+          "d20": -22,
+          "d60": -17.2
+        },
+        "sharpe": -2.32,
+        "maxDrawdown": 28.3,
+        "upRatio": 30,
+        "volumeTrend": "温和缩量",
+        "fiftyTwoWeek": {
+          "high": 11.64,
+          "low": 8.15,
+          "position": 3
+        },
+        "view": "RSI 30.5 中性，MACD绿柱，跌破5/20日均线。"
       },
       "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 1,
-        "view": "¥9.12, 1手¥912。眼科连锁龙头，老龄化+近视率双驱动，模式可复制性极强 目标价 ¥14，潜在空间 66.5%。"
+        "overallSignal": "undervalued",
+        "signalStrength": 0.7,
+        "targetPrice": 14,
+        "potential": 69.6969696969697,
+        "view": "¥9.12, 1手¥912。眼科连锁龙头，老龄化+近视率双驱动，模式可复制性极强 目标价¥14，潜在空间69.7%。"
       },
-      "insider": {
-        "overallSignal": "positive",
-        "signalStrength": 0.589
+      "risk": {
+        "volatility": 28.8,
+        "sharpe": -2.32,
+        "maxDrawdown": 28.3,
+        "volumeTrend": "温和缩量",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "集采降价",
+          "研发失败风险"
+        ],
+        "view": "波动率28.8%，最大回撤28.3%，夏普-2.32。"
       },
-      "recommendation": {
-        "signal": "BUY",
-        "confidence": 0.63
-      },
-      "risks": [
-        "流动性风险",
-        "行业周期风险",
-        "原材料价格风险"
-      ]
-    },
-    {
-      "ticker": "600438.SS",
-      "name": "通威股份",
-      "technical": {
-        "overallSignal": "bullish",
-        "signalStrength": 0.73,
-        "view": "当日信号: 强势看多 (评分 73/100)。价格 ¥14.2，上涨 1.65%。"
-      },
-      "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 1,
-        "view": "¥14.77, 1手¥1477。硅料+电池双龙头，成本行业最低，行业出清后集中度提升受益最大 目标价 ¥20，潜在空间 40.8%。"
-      },
-      "insider": {
-        "overallSignal": "positive",
-        "signalStrength": 0.619
-      },
-      "recommendation": {
-        "signal": "BUY",
-        "confidence": 0.73
-      },
-      "risks": [
-        "个股波动风险",
-        "流动性风险"
-      ]
-    },
-    {
-      "ticker": "601899.SS",
-      "name": "紫金矿业",
-      "technical": {
-        "overallSignal": "bearish",
-        "signalStrength": 0.42,
-        "view": "当日信号: 偏弱关注 (评分 42/100)。价格 ¥27.33，下跌 -1.34%。"
-      },
-      "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 1,
-        "view": "¥30.44, 1手¥3044。全球铜金矿巨头，新能源金属+央行购金双驱动，海外产能释放 目标价 ¥36，潜在空间 31.7%。"
-      },
-      "insider": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.526
+      "classification": {
+        "labels": [
+          "超跌反弹"
+        ],
+        "scores": {},
+        "primary": "超跌反弹"
       },
       "recommendation": {
         "signal": "WATCH",
-        "confidence": 0.42
-      },
-      "risks": [
-        "原材料价格风险",
-        "政策监管风险",
-        "流动性风险"
-      ]
+        "confidence": 41,
+        "totalScore": 48,
+        "view": "信号偏弱，注意风险"
+      }
     },
     {
-      "ticker": "600585.SS",
-      "name": "海螺水泥",
+      "ticker": "600031.SS",
+      "name": "三一重工",
       "technical": {
-        "overallSignal": "bearish",
-        "signalStrength": 0.37,
-        "view": "当日信号: 偏弱关注 (评分 37/100)。价格 ¥18.57，下跌 -1.12%。"
+        "overallSignal": "neutral",
+        "signalStrength": 0.55,
+        "rsi": 42.9,
+        "macd": {
+          "value": -0.34,
+          "signal": -0.42,
+          "histogram": 0.09
+        },
+        "ma5": 19.03,
+        "ma20": 18.8,
+        "ma60": 19.71,
+        "bollinger": {
+          "upper": 20.19,
+          "middle": 18.8,
+          "lower": 17.41
+        },
+        "volatility": 39,
+        "momentum": {
+          "d5": 0.4,
+          "d20": -11.6,
+          "d60": -14.4
+        },
+        "sharpe": -1.49,
+        "maxDrawdown": 25.4,
+        "upRatio": 45,
+        "volumeTrend": "温和放量",
+        "fiftyTwoWeek": {
+          "high": 24.29,
+          "low": 17.38,
+          "position": 21
+        },
+        "view": "RSI 42.9 中性，MACD红柱，均线交织。"
       },
       "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 1,
-        "view": "¥20.15, 1手¥2015。水泥龙头成本优势突出，高分红+低估值，基建稳增长受益 目标价 ¥26，潜在空间 40.0%。"
+        "overallSignal": "undervalued",
+        "signalStrength": 0.6,
+        "targetPrice": 22,
+        "potential": 16.710875331564967,
+        "view": "¥17.94, 1手¥1794。海外收入60%+，设备更新周期+基建回暖，周期底部布局 目标价¥22，空间16.7%。"
       },
-      "insider": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.511
+      "risk": {
+        "volatility": 39,
+        "sharpe": -1.49,
+        "maxDrawdown": 25.4,
+        "volumeTrend": "温和放量",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "海外需求波动",
+          "原材料成本"
+        ],
+        "view": "波动率39.0%，最大回撤25.4%，夏普-1.49。"
+      },
+      "classification": {
+        "labels": [
+          "高波动"
+        ],
+        "scores": {
+          "highBeta": 8
+        },
+        "primary": "高波动"
       },
       "recommendation": {
         "signal": "WATCH",
-        "confidence": 0.37
-      },
-      "risks": [
-        "流动性风险",
-        "行业周期风险",
-        "汇率波动风险",
-        "市场系统性风险"
-      ]
-    },
-    {
-      "ticker": "002027.SZ",
-      "name": "分众传媒",
-      "technical": {
-        "overallSignal": "bearish",
-        "signalStrength": 0.45,
-        "view": "当日信号: 震荡观望 (评分 45/100)。价格 ¥5.34，下跌 -0.93%。"
-      },
-      "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 1,
-        "view": "¥5.58, 1手¥558。梯媒绝对龙头，经济复苏广告需求弹性大，股息率4%+ 目标价 ¥8，潜在空间 49.8%。"
-      },
-      "insider": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.535
-      },
-      "recommendation": {
-        "signal": "HOLD",
-        "confidence": 0.45
-      },
-      "risks": [
-        "个股波动风险",
-        "流动性风险",
-        "汇率波动风险"
-      ]
-    },
-    {
-      "ticker": "600900.SS",
-      "name": "长江电力",
-      "technical": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.65,
-        "view": "当日信号: 偏多 (评分 65/100)。价格 ¥27.89，上涨 0.72%。"
-      },
-      "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 0.6947292936536393,
-        "view": "¥27.75, 1手¥2775。水电龙头现金流稳定，股息率3.5%+，类债券防御资产 目标价 ¥32，潜在空间 14.7%。"
-      },
-      "insider": {
-        "overallSignal": "positive",
-        "signalStrength": 0.595
-      },
-      "recommendation": {
-        "signal": "BUY",
-        "confidence": 0.65
-      },
-      "risks": [
-        "汇率波动风险",
-        "竞争加剧风险",
-        "政策监管风险"
-      ]
-    },
-    {
-      "ticker": "600030.SS",
-      "name": "中信证券",
-      "technical": {
-        "overallSignal": "bearish",
-        "signalStrength": 0.45,
-        "view": "当日信号: 震荡观望 (评分 45/100)。价格 ¥25.51，下跌 -0.58%。"
-      },
-      "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 0.752018816150529,
-        "view": "¥26.05, 1手¥2605。券商龙头，牛市高弹性，PB历史低位，成交活跃时爆发力强 目标价 ¥30，潜在空间 17.6%。"
-      },
-      "insider": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.535
-      },
-      "recommendation": {
-        "signal": "HOLD",
-        "confidence": 0.45
-      },
-      "risks": [
-        "政策监管风险",
-        "竞争加剧风险",
-        "技术变革风险"
-      ]
-    },
-    {
-      "ticker": "600036.SS",
-      "name": "招商银行",
-      "technical": {
-        "overallSignal": "bearish",
-        "signalStrength": 0.45,
-        "view": "当日信号: 震荡观望 (评分 45/100)。价格 ¥38.73，下跌 -0.44%。"
-      },
-      "fundamental": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.5688613477924092,
-        "view": "¥38.01, 1手¥3801。零售银行之王，ROE行业最高，股息率5%+，防御配置首选 目标价 ¥42，潜在空间 8.4%。"
-      },
-      "insider": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.535
-      },
-      "recommendation": {
-        "signal": "HOLD",
-        "confidence": 0.45
-      },
-      "risks": [
-        "市场系统性风险",
-        "原材料价格风险",
-        "个股波动风险"
-      ]
+        "confidence": 41,
+        "totalScore": 48,
+        "view": "信号偏弱，注意风险"
+      }
     },
     {
       "ticker": "600887.SS",
       "name": "伊利股份",
       "technical": {
-        "overallSignal": "neutral",
-        "signalStrength": 0.55,
-        "view": "当日信号: 震荡观望 (评分 55/100)。价格 ¥25.61，上涨 0.12%。"
+        "overallSignal": "bearish",
+        "signalStrength": 0.4,
+        "rsi": 43.3,
+        "macd": {
+          "value": -0.3,
+          "signal": -0.14,
+          "histogram": -0.17
+        },
+        "ma5": 25.47,
+        "ma20": 26.45,
+        "ma60": 26.38,
+        "bollinger": {
+          "upper": 27.82,
+          "middle": 26.45,
+          "lower": 25.09
+        },
+        "volatility": 22.5,
+        "momentum": {
+          "d5": -3.6,
+          "d20": -7.8,
+          "d60": -4.1
+        },
+        "sharpe": -0.85,
+        "maxDrawdown": 10.5,
+        "upRatio": 35,
+        "volumeTrend": "stable",
+        "fiftyTwoWeek": {
+          "high": 28.4,
+          "low": 24.98,
+          "position": 18
+        },
+        "view": "RSI 43.3 中性，MACD绿柱，均线交织。"
       },
       "fundamental": {
-        "overallSignal": "bullish",
-        "signalStrength": 0.8990238188207731,
-        "view": "¥26.92, 1手¥2692。乳业绝对龙头，品牌+渠道壁垒深厚，股息率3%+消费防御 目标价 ¥32，潜在空间 25.0%。"
+        "overallSignal": "undervalued",
+        "signalStrength": 0.6,
+        "targetPrice": 32,
+        "potential": 25.09773260359658,
+        "view": "¥26.92, 1手¥2692。乳业绝对龙头，品牌+渠道壁垒深厚，股息率3%+消费防御 目标价¥32，空间25.1%。"
       },
-      "insider": {
-        "overallSignal": "positive",
-        "signalStrength": 0.5650000000000001
+      "risk": {
+        "volatility": 22.5,
+        "sharpe": -0.85,
+        "maxDrawdown": 10.5,
+        "volumeTrend": "stable",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "消费复苏不及预期",
+          "原材料涨价"
+        ],
+        "view": "波动率22.5%，最大回撤10.5%，夏普-0.85。"
+      },
+      "classification": {
+        "labels": [
+          "价值洼地"
+        ],
+        "scores": {
+          "value": 7
+        },
+        "primary": "价值洼地"
       },
       "recommendation": {
-        "signal": "HOLD",
-        "confidence": 0.55
+        "signal": "WATCH",
+        "confidence": 44,
+        "totalScore": 45,
+        "view": "信号偏弱，注意风险"
+      }
+    },
+    {
+      "ticker": "601899.SS",
+      "name": "紫金矿业",
+      "technical": {
+        "overallSignal": "neutral",
+        "signalStrength": 0.45,
+        "rsi": 33.7,
+        "macd": {
+          "value": -1.37,
+          "signal": -1.07,
+          "histogram": -0.3
+        },
+        "ma5": 28.24,
+        "ma20": 30.36,
+        "ma60": 32.65,
+        "bollinger": {
+          "upper": 33.24,
+          "middle": 30.36,
+          "lower": 27.48
+        },
+        "volatility": 43.8,
+        "momentum": {
+          "d5": -9.9,
+          "d20": -18.5,
+          "d60": -23.6
+        },
+        "sharpe": -2.39,
+        "maxDrawdown": 37.1,
+        "upRatio": 25,
+        "volumeTrend": "stable",
+        "fiftyTwoWeek": {
+          "high": 44.94,
+          "low": 26.8,
+          "position": 5
+        },
+        "view": "RSI 33.7 中性，MACD绿柱，跌破5/20日均线。"
       },
-      "risks": [
-        "市场系统性风险",
-        "竞争加剧风险",
-        "汇率波动风险"
-      ]
+      "fundamental": {
+        "overallSignal": "undervalued",
+        "signalStrength": 0.6,
+        "targetPrice": 36,
+        "potential": 29.963898916967512,
+        "view": "¥30.44, 1手¥3044。全球铜金矿巨头，新能源金属+央行购金双驱动，海外产能释放 目标价¥36，空间30.0%。"
+      },
+      "risk": {
+        "volatility": 43.8,
+        "sharpe": -2.39,
+        "maxDrawdown": 37.1,
+        "volumeTrend": "stable",
+        "specificRisks": [
+          "市场系统性风险",
+          "宏观经济不确定性",
+          "大宗商品价格波动",
+          "海外政策风险"
+        ],
+        "view": "波动率43.8%，最大回撤37.1%，夏普-2.39。"
+      },
+      "classification": {
+        "labels": [
+          "高波动",
+          "超跌反弹"
+        ],
+        "scores": {
+          "highBeta": 9
+        },
+        "primary": "高波动"
+      },
+      "recommendation": {
+        "signal": "WATCH",
+        "confidence": 45,
+        "totalScore": 43,
+        "view": "信号偏弱，注意风险"
+      }
     }
   ]
 }

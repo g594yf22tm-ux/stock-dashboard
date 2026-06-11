@@ -592,6 +592,8 @@
     .tech-badge { font-size: 0.68em; padding: 2px 6px; border-radius: 3px; border: 1px solid; font-family: 'JetBrains Mono','Consolas',monospace; }
     .ac-risks { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; align-items: center; }
     .risk-tag { font-size: 0.7em; padding: 2px 7px; border-radius: 3px; background: rgba(244,63,94,0.07); color: var(--up-bright); border: 1px solid rgba(244,63,94,0.12); }
+    .clf-line { display: inline-flex; gap: 3px; margin-left: 4px; vertical-align: middle; }
+    .clf-tag { font-size: 0.65em; padding: 1px 5px; border-radius: 3px; background: rgba(82,152,245,0.1); color: var(--primary-light); border: 1px solid rgba(82,152,245,0.2); }
     .ac-total { display: block; font-size: 1.6em; font-weight: 700; line-height: 1; margin-top: 2px; }
     .ac-total-label { font-size: 0.65em; color: var(--muted); }
     .ac-body { margin-bottom: 12px; }
@@ -846,6 +848,10 @@ async function get(url) {
             ma5:a.technical?.ma5, ma20:a.technical?.ma20,
             volatility:a.technical?.volatility,
             position52w:a.technical?.fiftyTwoWeek?.position,
+            momentum:a.technical?.momentum,
+            sharpe:a.technical?.sharpe,
+            maxDrawdown:a.technical?.maxDrawdown,
+            classification:a.classification,
             risks:a.risk?.specificRisks||[],
             scores:{
               fundamental:(a.fundamental?.signalStrength||0.5)*10,
@@ -1052,21 +1058,26 @@ function renderAnalysis(recommendations) {
     const fundView = (r.fundamentalView || "").substring(0, 100) + ((r.fundamentalView||"").length > 100 ? "…" : "");
     const techView = (r.technicalView || "").substring(0, 100) + ((r.technicalView||"").length > 100 ? "…" : "");
 
+    // 分类标签
+    const clfLabels = (r.classification?.labels||[]).map(l => '<span class=\"clf-tag\">'+l+'</span>').join('');
+
     // 技术指标小标签
     let techBadges = '';
     if (r.rsi != null) {
       const rsiColor = r.rsi > 70 ? 'var(--up)' : r.rsi < 30 ? 'var(--down)' : 'var(--info)';
       techBadges += '<span class=\"tech-badge\" style=\"border-color:'+rsiColor+';color:'+rsiColor+'\">RSI '+r.rsi.toFixed(0)+'</span>';
     }
-    if (r.ma5 && r.ma20) {
-      const aboveMA = r.ma5 > r.ma20;
-      techBadges += '<span class=\"tech-badge\" style=\"border-color:'+(aboveMA?'var(--up)':'var(--down)')+';color:'+(aboveMA?'var(--up)':'var(--down)')+'\">MA5 '+r.ma5.toFixed(2)+'</span>';
+    if (r.momentum?.d5 != null) {
+      const mom = r.momentum.d5;
+      const momColor = mom > 0 ? 'var(--up)' : 'var(--down)';
+      techBadges += '<span class=\"tech-badge\" style=\"border-color:'+momColor+';color:'+momColor+'\">5日'+(mom>0?'+':'')+mom.toFixed(1)+'%</span>';
     }
-    if (r.volatility != null) {
-      techBadges += '<span class=\"tech-badge\" style=\"border-color:var(--muted);color:var(--muted)\">波'+r.volatility.toFixed(1)+'%</span>';
+    if (r.sharpe != null) {
+      const sColor = r.sharpe > 0.5 ? 'var(--down)' : r.sharpe > 0 ? 'var(--info)' : 'var(--up)';
+      techBadges += '<span class=\"tech-badge\" style=\"border-color:'+sColor+';color:'+sColor+'\">夏普'+r.sharpe.toFixed(2)+'</span>';
     }
-    if (r.position52w != null) {
-      techBadges += '<span class=\"tech-badge\" style=\"border-color:var(--accent);color:var(--accent)\">52周位'+r.position52w+'%</span>';
+    if (r.maxDrawdown != null) {
+      techBadges += '<span class=\"tech-badge\" style=\"border-color:var(--up);color:var(--up)\">回撤'+r.maxDrawdown.toFixed(0)+'%</span>';
     }
 
     // 风险标签
@@ -1081,7 +1092,7 @@ function renderAnalysis(recommendations) {
       "<div class=\"ac-header\">" +
         "<div class=\"ac-title\" onclick=\"showStockDetail('"+r.ticker+"')\" title=\"点击查看实时行情\">" +
           "<span class=\"ac-name\">" + (r.name || r.ticker) + "</span>" +
-          "<span class=\"ac-ticker\">" + r.ticker + "</span>" +
+          "<span class=\"ac-ticker\">" + r.ticker + (clfLabels ? ' <span class=\"clf-line\">'+clfLabels+'</span>' : '') + "</span>" +
         "</div>" +
         "<div class=\"ac-verdict\">" +
           "<span class=\"ac-signal-badge " + sigCls + "\">" + (sigIcons[sig]||"") + " " + (sigLabels[sig]||sig) + "</span>" +
