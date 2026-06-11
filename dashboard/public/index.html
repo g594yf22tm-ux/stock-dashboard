@@ -588,6 +588,10 @@
     .ac-signal-badge.buy { background: var(--up-bg); color: var(--up); }
     .ac-signal-badge.hold { background: var(--accent-bg); color: var(--accent); }
     .ac-signal-badge.watch { background: rgba(107,114,128,0.1); color: var(--text-secondary); }
+    .ac-tech-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+    .tech-badge { font-size: 0.68em; padding: 2px 6px; border-radius: 3px; border: 1px solid; font-family: 'JetBrains Mono','Consolas',monospace; }
+    .ac-risks { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; align-items: center; }
+    .risk-tag { font-size: 0.7em; padding: 2px 7px; border-radius: 3px; background: rgba(244,63,94,0.07); color: var(--up-bright); border: 1px solid rgba(244,63,94,0.12); }
     .ac-total { display: block; font-size: 1.6em; font-weight: 700; line-height: 1; margin-top: 2px; }
     .ac-total-label { font-size: 0.65em; color: var(--muted); }
     .ac-body { margin-bottom: 12px; }
@@ -830,7 +834,25 @@ async function get(url) {
         // 转换数据格式兼容现有渲染
         if (url===API.watchlistLive) return { stocks: data.stocks||[], trending: [], source: 'CDN', timestamp: data.timestamp };
         if (url===API.watchlist) return data;
-        if (url===API.analysis) return { recommendations: (data.analyses||[]).map(a=>({ticker:a.ticker,name:a.name,fundamentalView:a.fundamental?.view||'',technicalView:a.technical?.view||'',riskView:(a.risks||[]).join('；'),recommendation:a.recommendation?.signal||'HOLD',scores:{fundamental:(a.fundamental?.signalStrength||(a.technical?.signalStrength||0.5))*9,technical:(a.technical?.signalStrength||0.5)*10,risk:((a.technical?.signalStrength||0.5)*9)}}))};
+        if (url===API.analysis) { return { recommendations: (data.analyses||[]).map(a=>({
+            ticker:a.ticker, name:a.name,
+            fundamentalView:a.fundamental?.view||'',
+            technicalView:a.technical?.view||'',
+            riskView:a.risk?.view||'',
+            recommendation:a.recommendation?.signal||'HOLD',
+            confidence:a.recommendation?.confidence||50,
+            totalScore:a.recommendation?.totalScore||50,
+            rsi:a.technical?.rsi, macd:a.technical?.macd,
+            ma5:a.technical?.ma5, ma20:a.technical?.ma20,
+            volatility:a.technical?.volatility,
+            position52w:a.technical?.fiftyTwoWeek?.position,
+            risks:a.risk?.specificRisks||[],
+            scores:{
+              fundamental:(a.fundamental?.signalStrength||0.5)*10,
+              technical:(a.technical?.signalStrength||0.5)*10,
+              risk:0.5*10
+            }
+          }))}; }
         return data; // market.json as-is
       }
       return null;
@@ -1017,20 +1039,41 @@ function renderAnalysis(recommendations) {
   el.innerHTML = sorted.slice(0, 12).map(r => {
     const sig = (r.recommendation?.signal || "HOLD").toUpperCase();
     const sigCls = sig === "BUY" ? "buy" : sig === "WATCH" ? "watch" : "hold";
-    const score = r._signalScore || 50;
-    const conf = Math.round(score);
+    const score = r.totalScore || r._signalScore || 50;
+    const conf = r.confidence || Math.round(score);
 
     const fd = Math.round((r.scores?.fundamental || 5) * 10) / 10;
     const td = Math.round((r.scores?.technical || 5) * 10) / 10;
     const rd = Math.round((r.scores?.risk || 5) * 10) / 10;
-    const total = Math.round((fd + td + rd) / 3 * 10) / 10;
 
     const barW = v => Math.min(100, Math.max(2, v * 10));
     const barColor = v => v >= 8 ? "var(--up)" : v >= 6 ? "var(--accent)" : v >= 4 ? "var(--info)" : "var(--muted)";
 
-    const fundView = (r.fundamentalView || "").substring(0, 80) + ((r.fundamentalView||"").length > 80 ? "…" : "");
-    const techView = (r.technicalView || "").substring(0, 80) + ((r.technicalView||"").length > 80 ? "…" : "");
-    const riskView = (r.riskView || "").substring(0, 60) + ((r.riskView||"").length > 60 ? "…" : "");
+    const fundView = (r.fundamentalView || "").substring(0, 100) + ((r.fundamentalView||"").length > 100 ? "…" : "");
+    const techView = (r.technicalView || "").substring(0, 100) + ((r.technicalView||"").length > 100 ? "…" : "");
+
+    // 技术指标小标签
+    let techBadges = '';
+    if (r.rsi != null) {
+      const rsiColor = r.rsi > 70 ? 'var(--up)' : r.rsi < 30 ? 'var(--down)' : 'var(--info)';
+      techBadges += '<span class=\"tech-badge\" style=\"border-color:'+rsiColor+';color:'+rsiColor+'\">RSI '+r.rsi.toFixed(0)+'</span>';
+    }
+    if (r.ma5 && r.ma20) {
+      const aboveMA = r.ma5 > r.ma20;
+      techBadges += '<span class=\"tech-badge\" style=\"border-color:'+(aboveMA?'var(--up)':'var(--down)')+';color:'+(aboveMA?'var(--up)':'var(--down)')+'\">MA5 '+r.ma5.toFixed(2)+'</span>';
+    }
+    if (r.volatility != null) {
+      techBadges += '<span class=\"tech-badge\" style=\"border-color:var(--muted);color:var(--muted)\">波'+r.volatility.toFixed(1)+'%</span>';
+    }
+    if (r.position52w != null) {
+      techBadges += '<span class=\"tech-badge\" style=\"border-color:var(--accent);color:var(--accent)\">52周位'+r.position52w+'%</span>';
+    }
+
+    // 风险标签
+    const riskTags = (r.risks||[]).slice(0, 3).map(rk =>
+      '<span class=\"risk-tag\">'+rk+'</span>'
+    ).join('');
+
     const tickerEsc = (r.ticker||"").replace(/'/g, "\'");
     const nameEsc = (r.name||"").replace(/'/g, "\'");
 
@@ -1042,21 +1085,21 @@ function renderAnalysis(recommendations) {
         "</div>" +
         "<div class=\"ac-verdict\">" +
           "<span class=\"ac-signal-badge " + sigCls + "\">" + (sigIcons[sig]||"") + " " + (sigLabels[sig]||sig) + "</span>" +
-          "<span class=\"ac-total\" style=\"color:" + barColor(total) + "\">" + total.toFixed(1) + "</span>" +
+          "<span class=\"ac-total\" style=\"color:" + barColor(score/10) + "\">" + score + "</span>" +
           "<span class=\"ac-total-label\">综合分</span>" +
         "</div>" +
       "</div>" +
 
       "<div class=\"ac-body\">" +
-        (fundView ? "<div class=\"ac-line\"><span class=\"ac-role\">📊 基本面</span><span class=\"ac-text\">" + fundView + "</span></div>" : "") +
-        (techView ? "<div class=\"ac-line\"><span class=\"ac-role\">📈 技术面</span><span class=\"ac-text\">" + techView + "</span></div>" : "") +
-        (riskView ? "<div class=\"ac-line\"><span class=\"ac-role\">🛡️ 风险</span><span class=\"ac-text\">" + riskView + "</span></div>" : "") +
+        (fundView ? "<div class=\"ac-line\"><span class=\"ac-role\">💰</span><span class=\"ac-text\">" + fundView + "</span></div>" : "") +
+        (techView ? "<div class=\"ac-line\"><span class=\"ac-role\">📈</span><span class=\"ac-text\">" + techView + "</span></div>" : "") +
+        (techBadges ? "<div class=\"ac-tech-badges\">" + techBadges + "</div>" : "") +
+        (riskTags ? "<div class=\"ac-risks\"><span class=\"ac-role\">⚠️</span>" + riskTags + "</div>" : "") +
       "</div>" +
 
       "<div class=\"ac-scores\">" +
+        "<div class=\"ac-score-row\"><span class=\"ac-score-label\">技术</span><div class=\"ac-bar-track\"><div class=\"ac-bar-fill\" style=\"width:" + barW(td) + "%;background:" + barColor(td) + "\"></div></div><span class=\"ac-score-val\" style=\"color:" + barColor(td) + "\">" + td.toFixed(1) + "</span></div>" +
         "<div class=\"ac-score-row\"><span class=\"ac-score-label\">基本面</span><div class=\"ac-bar-track\"><div class=\"ac-bar-fill\" style=\"width:" + barW(fd) + "%;background:" + barColor(fd) + "\"></div></div><span class=\"ac-score-val\" style=\"color:" + barColor(fd) + "\">" + fd.toFixed(1) + "</span></div>" +
-        "<div class=\"ac-score-row\"><span class=\"ac-score-label\">技术面</span><div class=\"ac-bar-track\"><div class=\"ac-bar-fill\" style=\"width:" + barW(td) + "%;background:" + barColor(td) + "\"></div></div><span class=\"ac-score-val\" style=\"color:" + barColor(td) + "\">" + td.toFixed(1) + "</span></div>" +
-        "<div class=\"ac-score-row\"><span class=\"ac-score-label\">风  险</span><div class=\"ac-bar-track\"><div class=\"ac-bar-fill\" style=\"width:" + barW(rd) + "%;background:" + barColor(rd) + "\"></div></div><span class=\"ac-score-val\" style=\"color:" + barColor(rd) + "\">" + rd.toFixed(1) + "</span></div>" +
       "</div>" +
 
       "<div class=\"ac-footer\">" +
