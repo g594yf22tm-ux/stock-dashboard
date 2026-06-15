@@ -1,0 +1,31 @@
+{
+  "name": "我的持仓",
+  "updated": "2026-06-16T00:00:00.000Z",
+  "cash": 0,
+  "positions": [
+    {
+      "ticker": "600036.SS",
+      "name": "招商银行",
+      "shares": 1000,
+      "costPrice": 36.50,
+      "entryDate": "2026-01-15",
+      "notes": "银行龙头，长期持有"
+    },
+    {
+      "ticker": "600900.SS",
+      "name": "长江电力",
+      "shares": 2000,
+      "costPrice": 25.80,
+      "entryDate": "2026-02-20",
+      "notes": "高股息防御品种"
+    },
+    {
+      "ticker": "601899.SS",
+      "name": "紫金矿业",
+      "shares": 1500,
+      "costPrice": 26.00,
+      "entryDate": "2026-03-10",
+      "notes": "铜金矿巨头，通胀对冲"
+    }
+  ]
+}
