@@ -57,25 +57,34 @@ jobs:
           git config user.name "A股行情机器人"
           git config user.email "stock-bot@github.com"
 
-          # 1. 备份刚抓取的最新数据到临时目录
+          # 1. 备份数据到临时目录
           TMP_DATA=$(mktemp -d)
           cp -r dashboard/data "$TMP_DATA/"
           cp index.html report.html standalone.html "$TMP_DATA/" 2>/dev/null || true
+          echo "数据已备份到 $TMP_DATA"
+          ls -la "$TMP_DATA"/data/
 
           # 2. 切换到 gh-pages
-          git fetch origin gh-pages 2>/dev/null || true
-          git checkout gh-pages 2>/dev/null || git checkout -b gh-pages
+          git fetch origin gh-pages
+          git checkout gh-pages || git checkout -b gh-pages
           git pull origin gh-pages 2>/dev/null || true
 
-          # 3. 用备份的最新数据覆盖 gh-pages
-          cp -r "$TMP_DATA/data/"* dashboard/data/ 2>/dev/null || true
+          # 3. 确保目录存在，用备份覆盖 gh-pages
+          mkdir -p dashboard/data
+          cp -r "$TMP_DATA"/data/* dashboard/data/
           cp "$TMP_DATA"/index.html index.html 2>/dev/null || true
           cp "$TMP_DATA"/report.html report.html 2>/dev/null || true
           cp "$TMP_DATA"/standalone.html standalone.html 2>/dev/null || true
           rm -rf "$TMP_DATA"
+          echo "已覆盖数据文件"
+          ls -la dashboard/data/
 
-          # 4. 提交并推送 gh-pages（始终提交，确保数据更新）
+          # 4. 提交并推送
           git add dashboard/data/ index.html report.html standalone.html 2>/dev/null || true
-          git commit -m "📊 行情数据更新 $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')" || echo "数据无变化，跳过提交"
-          git push origin gh-pages || echo "推送失败，重试中..."
-          echo "✅ gh-pages 同步完成"
+          if git diff --staged --quiet; then
+            echo "数据无变化，跳过提交"
+          else
+            git commit -m "📊 行情数据更新 $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')"
+            git push origin gh-pages
+            echo "✅ gh-pages 已推送"
+          fi
