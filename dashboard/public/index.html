@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>股票分析 — A股</title>
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+  <title>股票分析仪表盘 v3.1</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e293b'/><polyline points='4,24 12,14 18,18 28,6' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/><polyline points='22,6 28,6 28,12' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <style>
@@ -2111,7 +2112,7 @@ refreshAll();
 startSmartRefresh();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 🔧 自愈看门狗 — 5秒后自动修复残留的"加载中..."
+// 🔧 自愈看门狗 — 3秒后自动修复残留的"加载中..."
 // ═══════════════════════════════════════════════════════════════════════════
 setTimeout(function _watchdog() {
   var sections = [
@@ -2136,7 +2137,7 @@ setTimeout(function _watchdog() {
     var btn = document.getElementById('refreshBtn');
     if (btn && btn.textContent.indexOf('⏳') >= 0) { btn.textContent = '🔄 重试'; btn.disabled = false; }
   }
-}, 5000);
+}, 3000);
 </script>
   <script src="report-modal.js" defer></script>
 
