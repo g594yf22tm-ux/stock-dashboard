@@ -743,6 +743,21 @@
     </div>
   </div>
 
+  <!-- 我的持仓 -->
+  <div class="card" id="portfolioCard">
+    <div class="card-title">💼 我的持仓 <span style="font-size:0.7em;color:var(--muted);font-weight:400" id="portfolioSummary"></span></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>代码</th><th>名称</th><th>持仓</th><th>成本价</th><th>现价</th><th>盈亏</th><th>盈亏%</th><th>市值</th><th>占比</th>
+          </tr>
+        </thead>
+        <tbody id="portfolioBody"><tr><td colspan="9" class="loading">加载中...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- 专家分析 -->
   <div class="card">
     <div class="card-title">🧠 专家团队分析建议</div>
@@ -1747,6 +1762,62 @@ async function loadFavorites() {
   } catch(e) { console.error('Fav load error:', e); }
 }
 
+// ── 持仓管理 ────────────────────────────────────────────────────────────
+let _portfolioData = null;
+async function loadPortfolio() {
+  try {
+    if (isRemote) {
+      const data = await fetchCDN('portfolio.json');
+      if (data) _portfolioData = data;
+    } else {
+      const r = await fetch('/api/portfolio'); if (r.ok) _portfolioData = await r.json();
+    }
+    renderPortfolio();
+  } catch(e) { console.error('Portfolio load error:', e); }
+}
+function renderPortfolio() {
+  var tbody = document.getElementById('portfolioBody');
+  var summary = document.getElementById('portfolioSummary');
+  var data = _portfolioData;
+  if (!data || !data.positions || !data.positions.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="no-data">暂无持仓<br><small>编辑 dashboard/data/portfolio.json 添加持仓</small></td></tr>';
+    return;
+  }
+  var totalValue = 0, totalCost = 0;
+  var rows = data.positions.map(function(p) {
+    var w = _watchlistData.find(function(x){ return x.ticker === p.ticker; });
+    var price = (w && w.price) || p.costPrice;
+    var cost = p.shares * p.costPrice;
+    var value = p.shares * price;
+    var pnl = value - cost;
+    var pnlPct = ((price - p.costPrice) / p.costPrice * 100);
+    totalValue += value;
+    totalCost += cost;
+    var dir = pnl >= 0 ? 'up' : 'down';
+    return { ticker: p.ticker, name: p.name || p.ticker, shares: p.shares,
+      costPrice: p.costPrice, price: price, pnl: pnl, pnlPct: pnlPct, value: value, dir: dir };
+  });
+  var totalPnl = totalValue - totalCost;
+  var totalPnlPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+  var totalDir = totalPnl >= 0 ? 'up' : 'down';
+
+  if (summary) summary.innerHTML = '总市值 <b>¥' + (totalValue/1e4).toFixed(1) + '万</b> | 总盈亏 <b class=\"' + totalDir + '\">' + (totalPnl>=0?'+':'') + (totalPnl/1e4).toFixed(2) + '万 (' + (totalPnlPct>=0?'+':'') + totalPnlPct.toFixed(2) + '%)</b>';
+
+  tbody.innerHTML = rows.map(function(r) {
+    return '<tr style=\"cursor:pointer\" onclick=\"showStockDetail(\\''+r.ticker+'\\')\">' +
+      '<td><b>' + r.ticker + '</b></td>' +
+      '<td>' + r.name + '</td>' +
+      '<td>' + r.shares + '股</td>' +
+      '<td>¥' + r.costPrice.toFixed(2) + '</td>' +
+      '<td>¥' + r.price.toFixed(2) + '</td>' +
+      '<td class=\"' + r.dir + '\">' + (r.pnl>=0?'+':'') + (r.pnl/1e4).toFixed(4) + '万</td>' +
+      '<td class=\"' + r.dir + '\">' + (r.pnlPct>=0?'+':'') + r.pnlPct.toFixed(2) + '%</td>' +
+      '<td>¥' + (r.value/1e4).toFixed(2) + '万</td>' +
+      '<td>' + (totalValue>0 ? (r.value/totalValue*100).toFixed(1) : '0') + '%</td>' +
+    '</tr>';
+  }).join('');
+}
+
 // ── 快速分析 ────────────────────────────────────────────────────────────
 async function quickAnalyze(ticker) {
 
@@ -1955,7 +2026,7 @@ async function refreshAll() {
   if (analysis?.recommendations) renderAnalysis(analysis.recommendations);
   if (reports?.reports) renderReports(reports.reports);
 
-  try { loadFavorites(); refreshFavTickers(); } catch {}
+  try { loadFavorites(); loadPortfolio(); refreshFavTickers(); } catch {}
   updateFooterTime();
   // 缓存成功获取的数据
   try {
