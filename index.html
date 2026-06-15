@@ -1767,13 +1767,23 @@ let _portfolioData = null;
 async function loadPortfolio() {
   try {
     if (isRemote) {
-      const data = await fetchCDN('portfolio.json');
-      if (data) _portfolioData = data;
+      // 从 localStorage 加载（持仓数据私密，不存公开CDN）
+      var raw = localStorage.getItem('stock_portfolio_v1');
+      if (raw) { _portfolioData = JSON.parse(raw); }
+      else {
+        // 首次使用：从模板导入
+        var tmpl = await fetchCDN('portfolio.json');
+        if (tmpl) { _portfolioData = tmpl; localStorage.setItem('stock_portfolio_v1', JSON.stringify(tmpl)); }
+      }
     } else {
       const r = await fetch('/api/portfolio'); if (r.ok) _portfolioData = await r.json();
     }
     renderPortfolio();
   } catch(e) { console.error('Portfolio load error:', e); }
+}
+// 保存持仓到 localStorage
+function savePortfolio() {
+  try { if (_portfolioData) localStorage.setItem('stock_portfolio_v1', JSON.stringify(_portfolioData)); } catch(e) {}
 }
 function renderPortfolio() {
   var tbody = document.getElementById('portfolioBody');

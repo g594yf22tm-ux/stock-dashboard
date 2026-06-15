@@ -1,0 +1,31 @@
+{
+  "name": "我的持仓",
+  "updated": "2026-06-16T00:36:00.000Z",
+  "cash": 0,
+  "positions": [
+    {
+      "ticker": "600031.SS",
+      "name": "三一重工",
+      "shares": 50000,
+      "costPrice": 19.39,
+      "entryDate": "",
+      "notes": "海外收入60%+，设备更新周期+基建回暖。OCR 2026-06-15确认"
+    },
+    {
+      "ticker": "600195.SS",
+      "name": "中牧股份",
+      "shares": 70000,
+      "costPrice": 8.09,
+      "entryDate": "",
+      "notes": "⚠️ 亏损-16.3%，净利润-76%YoY，PE(TTM) 52.58。OCR 2026-06-15确认"
+    },
+    {
+      "ticker": "600887.SS",
+      "name": "伊利股份",
+      "shares": 10000,
+      "costPrice": 26.00,
+      "entryDate": "",
+      "notes": "6月5日除息0.90元/股，实际成本约25.10元。OCR 2026-06-15确认"
+    }
+  ]
+}
