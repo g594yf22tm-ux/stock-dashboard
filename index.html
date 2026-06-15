@@ -2013,28 +2013,28 @@ async function refreshAll() {
   const [market, live, analysis, reports] = results.map(r => r.status === 'fulfilled' ? r.value : null);
 
   if (market) {
-    renderIndices(market.indices);
-    renderSectors(market.sectors);
+    try { renderIndices(market.indices); } catch(e) { console.error('renderIndices:', e); }
+    try { renderSectors(market.sectors); } catch(e) { console.error('renderSectors:', e); }
   }
 
   if (live?.stocks) {
     if (live.timestamp) window._dataTimestamp = live.timestamp;
-    renderWatchlist(live.stocks, live.source);
+    try { renderWatchlist(live.stocks, live.source); } catch(e) { console.error('renderWatchlist:', e); }
   } else {
     try {
       const cached = await get(API.watchlist);
-      if (cached?.stocks) renderWatchlist(cached.stocks, '缓存');
+      if (cached?.stocks) try { renderWatchlist(cached.stocks, '缓存'); } catch(e) {}
     } catch {}
   }
 
   if (live?.trending?.length) {
-    renderTrending(live.trending);
+    try { renderTrending(live.trending); } catch(e) { console.error('renderTrending:', e); }
   } else if (market?.trending) {
-    renderTrending(market.trending);
+    try { renderTrending(market.trending); } catch(e) { console.error('renderTrending:', e); }
   }
 
-  if (analysis?.recommendations) renderAnalysis(analysis.recommendations);
-  if (reports?.reports) renderReports(reports.reports);
+  if (analysis?.recommendations) try { renderAnalysis(analysis.recommendations); } catch(e) { console.error('renderAnalysis:', e); }
+  if (reports?.reports) try { renderReports(reports.reports); } catch(e) { console.error('renderReports:', e); }
 
   try { loadFavorites(); loadPortfolio(); refreshFavTickers(); } catch {}
   updateFooterTime();
@@ -2109,6 +2109,34 @@ updateClock();
 setInterval(updateClock, 1000);
 refreshAll();
 startSmartRefresh();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔧 自愈看门狗 — 5秒后自动修复残留的"加载中..."
+// ═══════════════════════════════════════════════════════════════════════════
+setTimeout(function _watchdog() {
+  var sections = [
+    { id: 'indexCards',     name: '指数',   fallback: '<div class=\"no-data\">📊 点击刷新获取指数数据</div>' },
+    { id: 'sectorGrid',     name: '板块',   fallback: '<div class=\"no-data\">📊 点击刷新获取板块数据</div>' },
+    { id: 'trendingList',   name: '热门',   fallback: '<div class=\"no-data\">🔥 点击刷新获取热门关注</div>' },
+    { id: 'watchlistBody',  name: '关注',   fallback: '<tr><td colspan=\"12\" class=\"no-data\">📋 点击刷新获取关注列表</td></tr>' },
+    { id: 'analysisGrid',   name: '分析',   fallback: '<div class=\"no-data\">🧠 点击刷新获取分析数据</div>' },
+    { id: 'reportsList',    name: '报告',   fallback: '<div class=\"no-data\">📄 点击刷新获取报告</div>' },
+    { id: 'portfolioBody',  name: '持仓',   fallback: '<tr><td colspan=\"9\" class=\"no-data\">💼 添加持仓后显示</td></tr>' }
+  ];
+  var stuck = [];
+  sections.forEach(function(s) {
+    var el = document.getElementById(s.id);
+    if (el && el.textContent.indexOf('加载中') >= 0) {
+      el.innerHTML = s.fallback;
+      stuck.push(s.name);
+    }
+  });
+  if (stuck.length) {
+    console.warn('自愈看门狗修复了 '+stuck.length+' 个卡住的区域: '+stuck.join(', '));
+    var btn = document.getElementById('refreshBtn');
+    if (btn && btn.textContent.indexOf('⏳') >= 0) { btn.textContent = '🔄 重试'; btn.disabled = false; }
+  }
+}, 5000);
 </script>
   <script src="report-modal.js" defer></script>
 
