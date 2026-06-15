@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-15T16:26:54.174Z",
+  "timestamp": "2026-06-15T15:43:37.514Z",
   "source": "新浪财经",
   "indices": {
     "000001.SS": {
@@ -142,6 +142,6 @@
   },
   "marketStatus": {
     "open": false,
-    "text": "盘前"
+    "text": "已收盘"
   }
 }

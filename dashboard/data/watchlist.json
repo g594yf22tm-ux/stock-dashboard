@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-15T16:26:54.174Z",
+  "timestamp": "2026-06-15T15:43:37.515Z",
   "source": "新浪财经 (GitHub Actions)",
   "stocks": [
     {
@@ -225,7 +225,7 @@
   ],
   "marketStatus": {
     "open": false,
-    "text": "盘前"
+    "text": "已收盘"
   },
   "liveCount": 10
 }
