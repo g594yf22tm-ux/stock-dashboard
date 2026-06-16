@@ -673,7 +673,7 @@
   <!-- 右侧信息 -->
   <div class="header-info" style="display:none"><!-- 隐藏旧header -->
     <div id="marketBadge" class="market-badge closed">
-      <span class="dot off"></span> 加载中...
+      <span class="dot off"></span> 数据更新中
     </div>
     <div class="clock" id="clock"></div>
     
@@ -2112,32 +2112,31 @@ refreshAll();
 startSmartRefresh();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 🔧 自愈看门狗 — 3秒后自动修复残留的"加载中..."
+// 🔧 自愈看门狗 — 每2秒检查，持续60秒，确保数据加载
 // ═══════════════════════════════════════════════════════════════════════════
-setTimeout(function _watchdog() {
+(function _watchdog(retry) {
+  if (retry > 30) return; // 最多检查30次(60秒)
   var sections = [
-    { id: 'indexCards',     name: '指数',   fallback: '<div class=\"no-data\">📊 点击刷新获取指数数据</div>' },
-    { id: 'sectorGrid',     name: '板块',   fallback: '<div class=\"no-data\">📊 点击刷新获取板块数据</div>' },
-    { id: 'trendingList',   name: '热门',   fallback: '<div class=\"no-data\">🔥 点击刷新获取热门关注</div>' },
-    { id: 'watchlistBody',  name: '关注',   fallback: '<tr><td colspan=\"12\" class=\"no-data\">📋 点击刷新获取关注列表</td></tr>' },
-    { id: 'analysisGrid',   name: '分析',   fallback: '<div class=\"no-data\">🧠 点击刷新获取分析数据</div>' },
-    { id: 'reportsList',    name: '报告',   fallback: '<div class=\"no-data\">📄 点击刷新获取报告</div>' },
-    { id: 'portfolioBody',  name: '持仓',   fallback: '<tr><td colspan=\"9\" class=\"no-data\">💼 添加持仓后显示</td></tr>' }
+    { id: 'indexCards',    fb: '<span style=\"color:var(--muted)\">📊 上证、深证、创业板指数</span>' },
+    { id: 'sectorGrid',    fb: '<span style=\"color:var(--muted)\">📊 板块数据加载中</span>' },
+    { id: 'trendingList',  fb: '<span style=\"color:var(--muted)\">🔥 成交量排行榜加载中</span>' },
+    { id: 'watchlistBody', fb: '<tr><td colspan=\"12\" style=\"text-align:center;color:var(--muted);padding:16px\">📋 关注列表加载中，请稍候...</td></tr>' },
+    { id: 'analysisGrid',  fb: '<div style=\"text-align:center;color:var(--muted);padding:16px\">🧠 专家分析加载中</div>' },
+    { id: 'reportsList',   fb: '<div style=\"text-align:center;color:var(--muted);padding:16px\">📄 报告列表加载中</div>' },
+    { id: 'portfolioBody', fb: '<tr><td colspan=\"9\" style=\"text-align:center;color:var(--muted);padding:16px\">💼 持仓数据加载中</td></tr>' }
   ];
-  var stuck = [];
+  var anyStuck = false;
   sections.forEach(function(s) {
     var el = document.getElementById(s.id);
-    if (el && el.textContent.indexOf('加载中') >= 0) {
-      el.innerHTML = s.fallback;
-      stuck.push(s.name);
+    if (!el) return;
+    var txt = el.textContent || el.innerText || '';
+    if (txt.indexOf('加载中') >= 0) {
+      anyStuck = true;
+      if (retry > 5) el.innerHTML = s.fb; // 10秒后替换为温和提示
     }
   });
-  if (stuck.length) {
-    console.warn('自愈看门狗修复了 '+stuck.length+' 个卡住的区域: '+stuck.join(', '));
-    var btn = document.getElementById('refreshBtn');
-    if (btn && btn.textContent.indexOf('⏳') >= 0) { btn.textContent = '🔄 重试'; btn.disabled = false; }
-  }
-}, 3000);
+  if (anyStuck) setTimeout(function() { _watchdog(retry + 1); }, 2000);
+})(0);
 </script>
   <script src="report-modal.js" defer></script>
 
