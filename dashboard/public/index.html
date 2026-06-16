@@ -1815,7 +1815,7 @@ function renderPortfolio() {
   if (summary) summary.innerHTML = '总市值 <b>¥' + (totalValue/1e4).toFixed(1) + '万</b> | 总盈亏 <b class=\"' + totalDir + '\">' + (totalPnl>=0?'+':'') + (totalPnl/1e4).toFixed(2) + '万 (' + (totalPnlPct>=0?'+':'') + totalPnlPct.toFixed(2) + '%)</b>';
 
   tbody.innerHTML = rows.map(function(r) {
-    return '<tr style=\"cursor:pointer\" onclick=\"showStockDetail(\\''+r.ticker+'\\')\">' +
+    return '<tr style=\"cursor:pointer\" onclick=\"showStockDetail(\''+r.ticker+'\')\">' +
       '<td><b>' + r.ticker + '</b></td>' +
       '<td>' + r.name + '</td>' +
       '<td>' + r.shares + '股</td>' +
